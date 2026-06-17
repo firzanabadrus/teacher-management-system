@@ -115,7 +115,7 @@ class PerformanceService {
     await _db.runTransaction((transaction) async {
       final teacherSnapshot = await transaction.get(teacherRef);
       final currentScore =
-          ((teacherSnapshot.data()?['currentScore'] ?? 0) as num).toDouble();
+          ((teacherSnapshot.data()?['currentScore'] ?? 100) as num).toDouble();
       final newScore = currentScore + log.amount;
 
       transaction.set(logRef, log.toMap());

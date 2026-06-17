@@ -18,18 +18,94 @@ class KpiScreen extends StatefulWidget {
 
 class _KpiScreenState extends State<KpiScreen> {
   final _reasonController = TextEditingController();
-  final _categoryController = TextEditingController();
-  final _criterionController = TextEditingController();
 
+  static const Map<String, List<String>> _categoryCriteria = {
+    'Attendance and Punctuality': [
+      'Arrives at school on time',
+      'Comes prepared before class starts',
+      'Follow attendance procedures',
+      'Submit leave application properly',
+      'Has good attendance record',
+    ],
+    'Classroom Management': [
+      'Classroom is clean and organised',
+      'Students are well managed',
+      'Learning corners are updated',
+      'Safety rules are followed',
+      'Students line up properly',
+    ],
+    'Teaching Performance': [
+      'Lesson plan prepared on time',
+      'Lesson plan submitted on time',
+      'Teaching follows lesson plan (Sandbox)',
+      'Uses teaching aid effectively',
+      'Explains lesson clearly',
+      'Students are engaged during class',
+    ],
+    'Student Development': [
+      'Tracks student progress',
+      'Help weak students',
+      'Encourages student participation',
+      'Maintains student discipline positively',
+      'Gives motivation and encouragement',
+    ],
+    'Documentation and Record Keeping': [
+      'Students file updated',
+      'Attendance records complete',
+      'Assessment record submitted on time',
+      'Portfolio/student’s work organised',
+    ],
+    'Communication and Professionalism': [
+      'Speaks politely to students, parents and colleagues',
+      'Responds professionally in WhatsApp groups',
+      'Works well with team members',
+      'Accept feedback positively',
+      'Maintains professional appearance',
+    ],
+    'Task & Duty Responsibility': [
+      'Follow assembly duty schedules',
+      'Follow cleaning duty schedule',
+      'Completes arrival and dismissal duty',
+      'Helps during school events',
+    ],
+    'Creativity and Initiative': [
+      'Creates attractive teaching materials',
+      'Gives new activity ideas',
+      'Participates in school improvement',
+      'Decorate classroom creatively',
+      'Takes initiative without waiting for instruction',
+    ],
+    'Training and Self Development': [
+      'Attend required training (minimum 3 per year)',
+      'Applies knowledge from training',
+      'Shares learning with team',
+      'Improves teaching skills',
+    ],
+    'Discipline and SOP Compliance': [
+      'Follow school SOP',
+      'Uses appropriate language',
+      'Follow dress code',
+      'Maintains confidentiality',
+      'Uses social media professionally',
+    ],
+  };
+
+  late String _selectedCategory;
+  late String _selectedCriterion;
   bool _hasBootstrapped = false;
   bool _isPositive = true;
   String _severity = 'Normal';
 
   @override
+  void initState() {
+    super.initState();
+    _selectedCategory = _categoryCriteria.keys.first;
+    _selectedCriterion = _categoryCriteria[_selectedCategory]!.first;
+  }
+
+  @override
   void dispose() {
     _reasonController.dispose();
-    _categoryController.dispose();
-    _criterionController.dispose();
     super.dispose();
   }
 
@@ -66,10 +142,18 @@ class _KpiScreenState extends State<KpiScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isPrincipal ? 'Performance KPI Controls' : 'My KPI Dashboard',
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      isPrincipal ? 'Performance KPI Controls' : 'My KPI Dashboard',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  if (isPrincipal) _buildRefreshButton(provider),
+                ],
               ),
               const SizedBox(height: 16),
               if (provider.error != null) _buildErrorBanner(provider.error!),
@@ -123,18 +207,7 @@ class _KpiScreenState extends State<KpiScreen> {
   /// Selector row: dropdown expands, refresh button fixed width — no overflow.
   Widget _buildSelectorRow(
       PerformanceProvider provider, List<TeacherRecord> teachers) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: _buildTeacherSelector(provider, teachers)),
-        const SizedBox(width: 8),
-        // Fixed-width refresh button avoids overflow
-        SizedBox(
-          height: 56,
-          child: _buildRefreshButton(provider),
-        ),
-      ],
-    );
+    return _buildTeacherSelector(provider, teachers);
   }
 
   // ─── Teacher selector ─────────────────────────────────────────────────────────
@@ -191,16 +264,24 @@ class _KpiScreenState extends State<KpiScreen> {
   }
 
   Widget _buildRefreshButton(PerformanceProvider provider) {
-    return FilledButton.icon(
-      icon: provider.isLoading
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white))
-          : const Icon(LucideIcons.refreshCcw),
-      label: const Text('Refresh'),
-      onPressed: provider.isLoading ? null : () => provider.refreshAll(),
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          padding: EdgeInsets.zero,
+          shape: const CircleBorder(),
+        ),
+        onPressed: provider.isLoading ? null : () => provider.refreshAll(),
+        child: provider.isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(LucideIcons.refreshCcw, size: 20),
+      ),
     );
   }
 
@@ -283,69 +364,84 @@ class _KpiScreenState extends State<KpiScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Academic',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _criterionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Criterion',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Punctuality',
-                  ),
-                ),
-              ),
+          DropdownButtonFormField<String>(
+            value: _selectedCategory,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              border: OutlineInputBorder(),
+            ),
+            items: _categoryCriteria.keys
+                .map((category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    ))
+                .toList(),
+            onChanged: (category) {
+              if (category == null) return;
+              setState(() {
+                _selectedCategory = category;
+                _selectedCriterion = _categoryCriteria[category]!.first;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _selectedCriterion,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Criterion',
+              border: OutlineInputBorder(),
+            ),
+            items: _categoryCriteria[_selectedCategory]!
+                .map((criterion) => DropdownMenuItem(
+                      value: criterion,
+                      child: Text(criterion),
+                    ))
+                .toList(),
+            onChanged: (criterion) {
+              if (criterion == null) return;
+              setState(() => _selectedCriterion = criterion);
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _severity,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Severity',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Minor', child: Text('Minor')),
+              DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+              DropdownMenuItem(value: 'Major', child: Text('Major')),
+              DropdownMenuItem(value: 'Critical', child: Text('Critical')),
             ],
+            onChanged: (v) => setState(() => _severity = v ?? 'Normal'),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _severity,
-                  decoration: const InputDecoration(
-                    labelText: 'Severity',
-                    border: OutlineInputBorder(),
+                child: FilledButton(
+                  onPressed: () => setState(() => _isPositive = true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _isPositive ? AppTheme.primaryColor : Colors.grey[200],
+                    foregroundColor: _isPositive ? Colors.white : Colors.black,
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'Minor', child: Text('Minor')),
-                    DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                    DropdownMenuItem(value: 'Major', child: Text('Major')),
-                    DropdownMenuItem(
-                        value: 'Critical', child: Text('Critical')),
-                  ],
-                  onChanged: (v) => setState(() => _severity = v ?? 'Normal'),
+                  child: const Text('Add Merit'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(
-                      value: true,
-                      icon: Icon(LucideIcons.plusCircle),
-                      label: Text('Merit'),
-                    ),
-                    ButtonSegment(
-                      value: false,
-                      icon: Icon(LucideIcons.x),
-                      label: Text('Deduct'),
-                    ),
-                  ],
-                  selected: {_isPositive},
-                  onSelectionChanged: (v) =>
-                      setState(() => _isPositive = v.first),
+                child: FilledButton(
+                  onPressed: () => setState(() => _isPositive = false),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: !_isPositive ? AppTheme.primaryColor : Colors.grey[200],
+                    foregroundColor: !_isPositive ? Colors.white : Colors.black,
+                  ),
+                  child: const Text('Add Deduction'),
                 ),
               ),
             ],
@@ -374,10 +470,10 @@ class _KpiScreenState extends State<KpiScreen> {
     TeacherRecord principal,
   ) async {
     final reason = _reasonController.text.trim();
-    final category = _categoryController.text.trim();
-    final criterion = _criterionController.text.trim();
+    final category = _selectedCategory;
+    final criterion = _selectedCriterion;
 
-    if (reason.isEmpty || category.isEmpty || criterion.isEmpty) {
+    if (reason.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all fields.')),
       );
@@ -400,9 +496,9 @@ class _KpiScreenState extends State<KpiScreen> {
       await provider.addPerformanceLog(log);
       if (!context.mounted) return;
       _reasonController.clear();
-      _categoryController.clear();
-      _criterionController.clear();
       setState(() {
+        _selectedCategory = _categoryCriteria.keys.first;
+        _selectedCriterion = _categoryCriteria[_selectedCategory]!.first;
         _severity = 'Normal';
         _isPositive = true;
       });
