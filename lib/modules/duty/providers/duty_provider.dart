@@ -135,14 +135,17 @@ class DutyProvider extends ChangeNotifier {
     await _guard(() async {
       await _dutyService.createRecurringDuties(duty);
     });
+    loadForSelectedDate();
   }
 
   Future<void> updateDuty(Duty duty) async {
     await _guard(() => _dutyService.updateDuty(duty));
+    loadForSelectedDate();
   }
 
   Future<void> deleteDuty(String dutyId) async {
     await _guard(() => _dutyService.deleteDuty(dutyId));
+    loadForSelectedDate();
   }
 
   Future<DutyLocation?> addLocation(String name) async {

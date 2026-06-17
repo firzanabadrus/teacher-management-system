@@ -101,6 +101,9 @@ class DutyService {
     for (final date in dates) {
       final next = await autoAssignTeachers(duty.copyWith(date: date));
       final doc = await _duties.add(next.toMap());
+      // ---------- Debug Start ----------
+      print(jsonEncode(next.toMap()));
+      // ---------- Debug End ----------
       created.add(next._withId(doc.id));
     }
     return created;
