@@ -16,6 +16,7 @@ class TrainingPost {
   final String? trainingDescription;
   final int? maxTrainees;
   final String? type;
+  final String enrollmentMode;
   final List<String> traineeIds;
 
   TrainingPost({
@@ -34,8 +35,16 @@ class TrainingPost {
     this.trainingDescription,
     this.maxTrainees,
     this.type,
+    this.enrollmentMode = 'open_volunteer',
     required this.traineeIds,
   });
+
+  int get seatsTaken => traineeIds.length;
+  int? get remainingSeats => maxTrainees == null
+      ? null
+      : (maxTrainees! - seatsTaken).clamp(0, maxTrainees!);
+  bool get isFull => maxTrainees != null && seatsTaken >= maxTrainees!;
+  bool get isOpenVolunteer => enrollmentMode == 'open_volunteer';
 
   factory TrainingPost.fromMap(String id, Map<String, dynamic> data) {
     return TrainingPost(
@@ -54,6 +63,8 @@ class TrainingPost {
       trainingDescription: data['trainingDescription'],
       maxTrainees: data['maxTrainees']?.toInt(),
       type: data['type'],
+      enrollmentMode:
+          data['enrollmentMode'] ?? data['type'] ?? 'open_volunteer',
       traineeIds: List<String>.from(data['traineeIds'] ?? []),
     );
   }
@@ -74,6 +85,7 @@ class TrainingPost {
       'trainingDescription': trainingDescription,
       'maxTrainees': maxTrainees,
       'type': type,
+      'enrollmentMode': enrollmentMode,
       'traineeIds': traineeIds,
     };
   }
