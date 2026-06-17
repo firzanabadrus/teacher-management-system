@@ -11,6 +11,8 @@ import '../../modules/duty/screens/duty_schedule_screen.dart';
 import '../../modules/performance/screens/kpi_screen.dart';
 import '../../modules/leave/screens/leave_screen.dart';
 import '../../modules/report/screens/report_screen.dart';
+import '../../modules/leave/models/leave.dart';
+import '../../modules/leave/services/leave_service.dart';
 
 class PrincipalDashboard extends StatefulWidget {
   const PrincipalDashboard({Key? key}) : super(key: key);
@@ -39,7 +41,7 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
       AdminTrainingScreen(user: user),
       const DutyScheduleScreen(),
       const KpiScreen(),
-      const LeaveScreen(),
+      const _AdminLeaveManagementScreen(),
       const ReportScreen(),
     ];
 
@@ -228,6 +230,250 @@ class _AdminHomeScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Admin Leave Management UI ────────────────────────────────────────────────
+
+class _AdminLeaveManagementScreen extends StatefulWidget {
+  const _AdminLeaveManagementScreen({Key? key}) : super(key: key);
+
+  @override
+  __AdminLeaveManagementScreenState createState() => __AdminLeaveManagementScreenState();
+}
+
+class __AdminLeaveManagementScreenState extends State<_AdminLeaveManagementScreen> {
+  final LeaveService _leaveService = LeaveService();
+  List<LeaveRecord> _allLeaves = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeLeaves();
+  }
+
+  void _subscribeLeaves() {
+    _leaveService.getLeaves(teacherId: null).listen((leaves) {
+      if (mounted) {
+        setState(() {
+          _allLeaves = leaves;
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _handleLeaveReview(LeaveRecord leave, String status, String notes) async {
+    try {
+      await _leaveService.updateLeaveStatus(
+        leaveId: leave.id,
+        status: status,
+        principalNotes: notes,
+        teacherId: leave.teacherId,
+        leaveType: leave.type.name,
+        duration: leave.duration,
+        startDate: leave.startDate,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully $status leave request from ${leave.teacherName}.'),
+          backgroundColor: status == 'approved' ? Colors.green : Colors.red,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update leave: $e')));
+    }
+  }
+
+  void _showReviewDialog(LeaveRecord leave, String status) {
+    final notesController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${status.toUpperCase()} LEAVE REQUEST', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Teacher: ${leave.teacherName}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            Text('Period: ${leave.startDate} (${leave.duration.toInt()} days)', style: const TextStyle(fontSize: 11)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                labelText: 'FEEDBACK / REMARKS NOTES',
+                labelStyle: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.grey),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+              style: const TextStyle(fontSize: 11),
+            )
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CANCEL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey))),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _handleLeaveReview(leave, status, notesController.text);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: status == 'approved' ? const Color(0xFF2E7D32) : const Color(0xFFC62828), elevation: 0),
+            child: Text(status.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF5A6B5A)));
+
+    final pendingLeaves = _allLeaves.where((l) => l.status == 'pending').toList();
+    final historyLeaves = _allLeaves.where((l) => l.status != 'pending').toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('PENDING REVIEWS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Color(0xFF904060))),
+              Container(
+                decoration: BoxDecoration(color: const Color(0xFF904060).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Text('${pendingLeaves.length} Actionable Request(s)', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF904060))),
+              )
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (pendingLeaves.isEmpty)
+            Container(
+              decoration: BoxDecoration(color: const Color(0xFFF7F8F7), borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 36),
+              child: const Center(child: Text('NO PENDING APPLICANTS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.grey))),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: pendingLeaves.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final leave = pendingLeaves[index];
+                return Container(
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE9ECE9))),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(leave.teacherName.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF1E241E))),
+                          Container(
+                            decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            child: const Text('PENDING', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFFEF6C00))),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Type: ${leave.type.name}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF5A6B5A))),
+                      Text('Date Period: ${leave.startDate} to ${leave.endDate}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      Text('Duration: ${leave.duration.toInt()} day(s)', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      if (leave.remarks != null && leave.remarks!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(color: const Color(0xFFF7F8F7), borderRadius: BorderRadius.circular(6)),
+                          padding: const EdgeInsets.all(8),
+                          child: Text('Teacher Remarks: “${leave.remarks}”', style: const TextStyle(fontSize: 9, fontStyle: FontStyle.italic, color: Colors.grey)),
+                        )
+                      ],
+                      if (leave.documentName != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.attach_file, size: 11, color: Color(0xFF5A6B5A)),
+                            const SizedBox(width: 4),
+                            Text(leave.documentName!, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF5A6B5A))),
+                          ],
+                        )
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => _showReviewDialog(leave, 'rejected'),
+                            style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+                            child: const Text('REJECT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900)),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () => _showReviewDialog(leave, 'approved'),
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), elevation: 0),
+                            child: const Text('APPROVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                );
+              },
+            ),
+          const SizedBox(height: 24),
+          const Text('LEAVE ACTION LOG HISTORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Color(0xFF7A8A7A))),
+          const SizedBox(height: 10),
+          if (historyLeaves.isEmpty)
+            Container(
+              decoration: BoxDecoration(color: const Color(0xFFF7F8F7), borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 36),
+              child: const Center(child: Text('NO ARCHIVED LEAVE TRANSACTION HISTORY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.grey))),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: historyLeaves.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final leave = historyLeaves[index];
+                final isApproved = leave.status == 'approved';
+                return Container(
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE9ECE9))),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(leave.teacherName, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                          Container(
+                            decoration: BoxDecoration(color: isApproved ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            child: Text(leave.status.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: isApproved ? Colors.green : Colors.red)),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${leave.type.name} • ${leave.startDate} (${leave.duration.toInt()} days)', style: const TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      if (leave.principalNotes != null && leave.principalNotes!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text('Feedback: “${leave.principalNotes}”', style: const TextStyle(fontSize: 9, fontStyle: FontStyle.italic, color: Colors.grey)),
+                      ]
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }

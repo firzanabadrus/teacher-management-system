@@ -9,6 +9,7 @@ import '../../modules/duty/models/duty.dart';
 import '../../modules/duty/providers/duty_provider.dart';
 import '../../modules/duty/screens/duty_schedule_screen.dart';
 import '../../modules/teachers/models/teacher.dart';
+import '../../modules/leave/screens/leave_screen.dart';
 
 class TeacherHomeScreen extends StatelessWidget {
   final TeacherRecord user;
@@ -46,7 +47,9 @@ class TeacherHomeScreen extends StatelessWidget {
               _ShortcutCard(
                 title: 'Leaves',
                 icon: LucideIcons.calendarOff,
-                onTap: () => _showLeaveForm(context),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => LeaveScreen(teacher: user)),
+                ),
               ),
               const SizedBox(width: 12),
               _ShortcutCard(
@@ -130,52 +133,6 @@ class TeacherHomeScreen extends StatelessWidget {
     );
   }
 
-  void _showLeaveForm(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Request Leave',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Reason',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Submit Leave Request'),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ── Score ring ──────────────────────────────────────────────────────────────
