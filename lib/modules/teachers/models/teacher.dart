@@ -98,10 +98,12 @@ class TeacherRecord {
 
   factory TeacherRecord.fromMap(String id, Map<String, dynamic> data) {
     Map<String, DocumentRecord> docs = {};
-    if (data['documents'] != null) {
+    if (data['documents'] != null && data['documents'] is Map) { // ← add is Map check
       final docMap = data['documents'] as Map<String, dynamic>;
       docMap.forEach((key, value) {
-        docs[key] = DocumentRecord.fromMap(value as Map<String, dynamic>);
+        if (value is Map<String, dynamic>) { // ← add this check too
+          docs[key] = DocumentRecord.fromMap(value);
+        }
       });
     }
 

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../providers/app_state_provider.dart';
-import '../services/database_service.dart';
-import '../models/teacher.dart';
-import '../app_theme.dart';
+import '../../providers/app_state_provider.dart';
+import '../../modules/teachers/models/teacher.dart';
+import '../../modules/teachers/services/teacher_service.dart';
+import '../../app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -15,8 +15,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final DatabaseService _db = DatabaseService();
+  final TeacherService _db = TeacherService();
   bool _isCampusStaff = true;
+
+  // ---------- Debug Start ----------
+  @override
+  void initState() {
+    super.initState();
+    _db.getTeachers().listen((users) {
+      print('Users fetched: ${users.length}');
+      for (var u in users) {
+        print('  - ${u.fullName} (${u.role})');
+      }
+    }, onError: (e) {
+      print('Stream error: $e');
+    });
+  }
+   // ---------- Debug End ----------
 
   @override
   Widget build(BuildContext context) {
