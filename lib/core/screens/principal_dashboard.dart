@@ -31,54 +31,89 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
       return const Scaffold(body: Center(child: Text("Not logged in")));
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F3),
-      appBar: AppBar(
-        title: const Text('Admin Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.logOut),
-            onPressed: () => Navigator.of(context).canPop() ? context.go('/logout') : context.go('/logout'),
-          )
-        ],
-      ),
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (int index) => setState(() => _currentIndex = index),
-            labelType: NavigationRailLabelType.all,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isNarrow = constraints.maxWidth < 700;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F5F3),
+          appBar: AppBar(
+            title: const Text('Admin Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             backgroundColor: Colors.white,
-            selectedIconTheme: const IconThemeData(color: AppTheme.primaryColor),
-            selectedLabelTextStyle: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-            unselectedLabelTextStyle: const TextStyle(color: AppTheme.textLightColor),
-            destinations: const [
-              NavigationRailDestination(icon: Icon(LucideIcons.home), label: Text('Home')),
-              NavigationRailDestination(icon: Icon(LucideIcons.bookOpen), label: Text('Training')),
-              NavigationRailDestination(icon: Icon(LucideIcons.calendarDays), label: Text('Schedule')),
-              NavigationRailDestination(icon: Icon(LucideIcons.barChart2), label: Text('KPI')),
-              NavigationRailDestination(icon: Icon(LucideIcons.calendarOff), label: Text('Leaves')),
-              NavigationRailDestination(icon: Icon(LucideIcons.alertTriangle), label: Text('Reports')),
+            elevation: 0.5,
+            actions: [
+              IconButton(
+                icon: const Icon(LucideIcons.logOut),
+                onPressed: () => Navigator.of(context).canPop() ? context.go('/logout') : context.go('/logout'),
+              )
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1, color: Color(0xFFF0EFEC)),
-          Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: [
-                const TeacherDirectoryScreen(),
-                AdminTrainingScreen(user: user),
-                const DutyScheduleScreen(),
-                const KpiScreen(),
-                const LeaveScreen(),
-                const ReportScreen(),
-              ],
-            ),
-          ),
-        ],
-      ),
+          body: isNarrow
+              ? IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    const TeacherDirectoryScreen(),
+                    AdminTrainingScreen(user: user),
+                    const DutyScheduleScreen(),
+                    const KpiScreen(),
+                    const LeaveScreen(),
+                    const ReportScreen(),
+                  ],
+                )
+              : Row(
+                  children: [
+                    NavigationRail(
+                      selectedIndex: _currentIndex,
+                      onDestinationSelected: (int index) => setState(() => _currentIndex = index),
+                      labelType: NavigationRailLabelType.all,
+                      backgroundColor: Colors.white,
+                      selectedIconTheme: const IconThemeData(color: AppTheme.primaryColor),
+                      selectedLabelTextStyle: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                      unselectedLabelTextStyle: const TextStyle(color: AppTheme.textLightColor),
+                      destinations: const [
+                        NavigationRailDestination(icon: Icon(LucideIcons.home), label: Text('Home')),
+                        NavigationRailDestination(icon: Icon(LucideIcons.bookOpen), label: Text('Training')),
+                        NavigationRailDestination(icon: Icon(LucideIcons.calendarDays), label: Text('Schedule')),
+                        NavigationRailDestination(icon: Icon(LucideIcons.barChart2), label: Text('KPI')),
+                        NavigationRailDestination(icon: Icon(LucideIcons.calendarOff), label: Text('Leaves')),
+                        NavigationRailDestination(icon: Icon(LucideIcons.alertTriangle), label: Text('Reports')),
+                      ],
+                    ),
+                    const VerticalDivider(thickness: 1, width: 1, color: Color(0xFFF0EFEC)),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _currentIndex,
+                        children: [
+                          const TeacherDirectoryScreen(),
+                          AdminTrainingScreen(user: user),
+                          const DutyScheduleScreen(),
+                          const KpiScreen(),
+                          const LeaveScreen(),
+                          const ReportScreen(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+          bottomNavigationBar: isNarrow
+              ? BottomNavigationBar(
+                  backgroundColor: AppTheme.canvasBase,
+                  currentIndex: _currentIndex,
+                  onTap: (int index) => setState(() => _currentIndex = index),
+                  selectedItemColor: AppTheme.primaryColor,
+                  unselectedItemColor: AppTheme.textMuted,
+                  items: const [
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.home), label: 'Home'),
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.bookOpen), label: 'Training'),
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.calendarDays), label: 'Schedule'),
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.barChart2), label: 'KPI'),
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.calendarOff), label: 'Leaves'),
+                    BottomNavigationBarItem(icon: Icon(LucideIcons.alertTriangle), label: 'Reports'),
+                  ],
+                )
+              : null,
+        );
+      },
     );
   }
 }
