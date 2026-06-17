@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app_theme.dart';
 import '../../../providers/app_state_provider.dart';
@@ -47,12 +48,19 @@ class _TeacherDirectoryScreenState extends State<TeacherDirectoryScreen>
     return StreamBuilder<List<TeacherRecord>>(
       stream: _service.getTeachers(),
       builder: (ctx, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
+        if (snap.hasError) {
+          return Center(
+            child: Text('Error loading teachers: ${snap.error}',
+                style: const TextStyle(color: Colors.red)),
+          );
+        }
+        if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final all = (snap.data ?? [])
+        final all = snap.data!
             .where((t) => t.role != 'principal' && t.role != 'admin')
             .toList();
+
         final filtered = _filter(all);
 
         return LayoutBuilder(
@@ -287,46 +295,58 @@ class _TeacherDirectoryScreenState extends State<TeacherDirectoryScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Row 1: avatar + name/role
               Row(children: [
                 CircleAvatar(
-                  radius: 24,
+                  radius: 22,
                   backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
                   child: Text(t.fullName[0].toUpperCase(),
-                      style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 20)),
+                      style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(t.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     Text('${t.role} • ${t.email}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      _verificationBadge(t.verificationStatus),
-                      const SizedBox(width: 8),
-                      Text('${t.completionProgress}% complete',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                    ]),
+                        style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                   ]),
                 ),
-                // Approve / Reject overall record buttons
+              ]),
+              const SizedBox(height: 8),
+              // Row 2: badge + completion + action buttons
+              Row(children: [
+                _verificationBadge(t.verificationStatus),
+                const SizedBox(width: 8),
+                Text('${t.completionProgress}%',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                const Spacer(),
                 if (t.verificationStatus != 'approved')
                   TextButton.icon(
-                    icon: const Icon(LucideIcons.checkCircle, size: 14),
-                    label: const Text('Approve', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(foregroundColor: Colors.green),
+                    icon: const Icon(LucideIcons.checkCircle, size: 13),
+                    label: const Text('Approve', style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     onPressed: () => _approveRecord(t),
                   ),
                 if (t.verificationStatus != 'rejected')
                   TextButton.icon(
-                    icon: const Icon(LucideIcons.xCircle, size: 14),
-                    label: const Text('Reject', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    icon: const Icon(LucideIcons.xCircle, size: 13),
+                    label: const Text('Reject', style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     onPressed: () => _rejectRecord(t),
                   ),
               ]),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               TabBar(
                 controller: _tabCtrl,
                 labelColor: AppTheme.primaryColor,
@@ -406,14 +426,26 @@ class _TeacherDirectoryScreenState extends State<TeacherDirectoryScreen>
               ),
             ]),
           ),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 3.4,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          children: fields.map((f) => _infoTile(f.$1, f.$2)).toList(),
+        // Two-column auto-height layout (GridView fixed-aspect-ratio causes overflow on phones)
+        Column(
+          children: [
+            for (var i = 0; i < fields.length; i += 2)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _infoTile(fields[i].$1, fields[i].$2)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: i + 1 < fields.length
+                          ? _infoTile(fields[i + 1].$1, fields[i + 1].$2)
+                          : const SizedBox(),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ]),
     );
@@ -437,7 +469,7 @@ class _TeacherDirectoryScreenState extends State<TeacherDirectoryScreen>
             fontWeight: FontWeight.w500,
             color: value.isNotEmpty ? AppTheme.textCore : AppTheme.textMuted,
           ),
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
       ]),
@@ -531,12 +563,16 @@ class _TeacherDirectoryScreenState extends State<TeacherDirectoryScreen>
         if (status == 'uploaded' || status == 'verified') ...[
           const SizedBox(height: 10),
           Row(children: [
-            // View link placeholder
             if ((rec?.url ?? '').isNotEmpty)
               TextButton.icon(
                 icon: const Icon(LucideIcons.externalLink, size: 13),
                 label: const Text('View', style: TextStyle(fontSize: 12)),
-                onPressed: () {}, // open URL in browser
+                onPressed: () async {
+                  final uri = Uri.tryParse(rec!.url);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
               ),
             const Spacer(),
             if (status == 'uploaded')
@@ -888,11 +924,11 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
         fields[e.key] = e.value.text.trim();
       }
       await widget.service.adminUpdateTeacher(widget.teacher.id, fields);
-      if (mounted) Navigator.pop(context);
-    } catch (_) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Save failed. Please try again.')),
+          SnackBar(content: Text('Save failed: $e')),
         );
       }
     } finally {

@@ -4,9 +4,22 @@ import '../models/teacher.dart';
 class TeacherSeeder {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  static const _knownIds = {
+    'p_hani', 't_sarah', 't_ali', 't_nurul', 't_raj',
+    't_siti', 't_hafiz', 't_priya', 't_zarina',
+  };
+
   static Future<void> seed() async {
-    final teachers = _buildTeachers();
+    // Delete any legacy teacher documents that aren't in our known set.
+    final snap = await _db.collection('teachers').get();
+    for (final doc in snap.docs) {
+      if (!_knownIds.contains(doc.id)) {
+        await doc.reference.delete();
+      }
+    }
+
     // Always overwrite — ensures stale/incomplete docs are replaced.
+    final teachers = _buildTeachers();
     for (final teacher in teachers) {
       await _db.collection('teachers').doc(teacher.id).set(teacher.toMap());
     }

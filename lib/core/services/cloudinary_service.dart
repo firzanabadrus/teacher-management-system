@@ -12,7 +12,7 @@ class CloudinaryService {
   }) async {
     try {
       final uri = Uri.parse(
-        'https://api.cloudinary.com/v1_1/$_cloudName/upload',
+        'https://api.cloudinary.com/v1_1/$_cloudName/auto/upload',
       );
 
       final request = http.MultipartRequest('POST', uri)

@@ -1,14 +1,68 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import '../models/teacher.dart';
 import '../models/change_request.dart';
+
+const _projectId = 'teacher-management-syste-f8043';
+
+// Converts a Firestore REST field value (typed wrapper) to a plain Dart value.
+dynamic _fromRestValue(dynamic val) {
+  if (val is! Map) return val;
+  final v = Map<String, dynamic>.from(val);
+  if (v.containsKey('stringValue')) return v['stringValue'];
+  if (v.containsKey('integerValue')) return int.tryParse(v['integerValue'].toString()) ?? 0;
+  if (v.containsKey('doubleValue')) return (v['doubleValue'] as num).toDouble();
+  if (v.containsKey('booleanValue')) return v['booleanValue'];
+  if (v.containsKey('timestampValue')) return v['timestampValue'];
+  if (v.containsKey('nullValue')) return null;
+  if (v.containsKey('mapValue')) {
+    final fields = (v['mapValue'] as Map)['fields'] as Map? ?? {};
+    return Map<String, dynamic>.fromEntries(
+      fields.entries.map((e) => MapEntry(e.key as String, _fromRestValue(e.value))),
+    );
+  }
+  if (v.containsKey('arrayValue')) {
+    final values = (v['arrayValue'] as Map)['values'] as List? ?? [];
+    return values.map(_fromRestValue).toList();
+  }
+  return null;
+}
+
+Future<List<TeacherRecord>> _fetchTeachersRest() async {
+  final uri = Uri.parse(
+    'https://firestore.googleapis.com/v1/projects/$_projectId'
+    '/databases/(default)/documents/teachers',
+  );
+  final res = await http.get(uri).timeout(const Duration(seconds: 10));
+  if (res.statusCode != 200) return [];
+  final body = json.decode(res.body) as Map<String, dynamic>;
+  final docs = body['documents'] as List? ?? [];
+  return docs.map((doc) {
+    final id = (doc['name'] as String).split('/').last;
+    final fields = Map<String, dynamic>.fromEntries(
+      ((doc['fields'] as Map?) ?? {})
+          .entries
+          .map((e) => MapEntry(e.key as String, _fromRestValue(e.value))),
+    );
+    return TeacherRecord.fromMap(id, fields);
+  }).toList();
+}
 
 class TeacherService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  Stream<List<TeacherRecord>> getTeachers() {
-    return _db.collection('teachers').snapshots().map(
+  Stream<List<TeacherRecord>> getTeachers() async* {
+    // REST fetch first — bypasses gRPC so it works on Android devices where
+    // the Firestore gRPC backend is unreachable but standard HTTPS works fine.
+    try {
+      final list = await _fetchTeachersRest();
+      if (list.isNotEmpty) yield list;
+    } catch (_) {}
+    // Then emit real-time updates via the SDK stream.
+    yield* _db.collection('teachers').snapshots().map(
           (s) => s.docs.map((d) => TeacherRecord.fromMap(d.id, d.data())).toList(),
         );
   }
@@ -48,7 +102,7 @@ class TeacherService {
 
   /// Admin can update any field on a teacher document.
   Future<void> adminUpdateTeacher(String id, Map<String, dynamic> fields) async {
-    await _db.collection('teachers').doc(id).update(fields);
+    await _db.collection('teachers').doc(id).set(fields, SetOptions(merge: true));
   }
 
   // ── Document management ───────────────────────────────────────────────────

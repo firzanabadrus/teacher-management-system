@@ -22,6 +22,8 @@ class PrincipalDashboard extends StatefulWidget {
 class _PrincipalDashboardState extends State<PrincipalDashboard> {
   int _currentIndex = 0;
 
+  void _goTo(int index) => setState(() => _currentIndex = index);
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppStateProvider>(context);
@@ -31,6 +33,16 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
       return const Scaffold(body: Center(child: Text("Not logged in")));
     }
 
+    final screens = [
+      _AdminHomeScreen(user: user, onNavigate: _goTo),
+      const TeacherDirectoryScreen(),
+      AdminTrainingScreen(user: user),
+      const DutyScheduleScreen(),
+      const KpiScreen(),
+      const LeaveScreen(),
+      const ReportScreen(),
+    ];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isNarrow = constraints.maxWidth < 700;
@@ -38,82 +50,185 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
         return Scaffold(
           backgroundColor: const Color(0xFFF5F5F3),
           appBar: AppBar(
-            title: const Text('Admin Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            title: const Text('Admin Portal',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             backgroundColor: Colors.white,
             elevation: 0.5,
             actions: [
               IconButton(
                 icon: const Icon(LucideIcons.logOut),
-                onPressed: () => Navigator.of(context).canPop() ? context.go('/logout') : context.go('/logout'),
+                onPressed: () => context.go('/logout'),
               )
             ],
           ),
           body: isNarrow
-              ? IndexedStack(
-                  index: _currentIndex,
-                  children: [
-                    const TeacherDirectoryScreen(),
-                    AdminTrainingScreen(user: user),
-                    const DutyScheduleScreen(),
-                    const KpiScreen(),
-                    const LeaveScreen(),
-                    const ReportScreen(),
-                  ],
-                )
+              ? IndexedStack(index: _currentIndex, children: screens)
               : Row(
                   children: [
                     NavigationRail(
                       selectedIndex: _currentIndex,
-                      onDestinationSelected: (int index) => setState(() => _currentIndex = index),
+                      onDestinationSelected: _goTo,
                       labelType: NavigationRailLabelType.all,
                       backgroundColor: Colors.white,
-                      selectedIconTheme: const IconThemeData(color: AppTheme.primaryColor),
-                      selectedLabelTextStyle: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-                      unselectedLabelTextStyle: const TextStyle(color: AppTheme.textLightColor),
+                      selectedIconTheme:
+                          const IconThemeData(color: AppTheme.primaryColor),
+                      selectedLabelTextStyle: const TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold),
+                      unselectedLabelTextStyle:
+                          const TextStyle(color: AppTheme.textLightColor),
                       destinations: const [
-                        NavigationRailDestination(icon: Icon(LucideIcons.home), label: Text('Home')),
-                        NavigationRailDestination(icon: Icon(LucideIcons.bookOpen), label: Text('Training')),
-                        NavigationRailDestination(icon: Icon(LucideIcons.calendarDays), label: Text('Schedule')),
-                        NavigationRailDestination(icon: Icon(LucideIcons.barChart2), label: Text('KPI')),
-                        NavigationRailDestination(icon: Icon(LucideIcons.calendarOff), label: Text('Leaves')),
-                        NavigationRailDestination(icon: Icon(LucideIcons.alertTriangle), label: Text('Reports')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.home),
+                            label: Text('Home')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.users),
+                            label: Text('Teachers')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.bookOpen),
+                            label: Text('Training')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.calendarDays),
+                            label: Text('Schedule')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.barChart2),
+                            label: Text('KPI')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.calendarOff),
+                            label: Text('Leaves')),
+                        NavigationRailDestination(
+                            icon: Icon(LucideIcons.alertTriangle),
+                            label: Text('Reports')),
                       ],
                     ),
-                    const VerticalDivider(thickness: 1, width: 1, color: Color(0xFFF0EFEC)),
+                    const VerticalDivider(
+                        thickness: 1, width: 1, color: Color(0xFFF0EFEC)),
                     Expanded(
-                      child: IndexedStack(
-                        index: _currentIndex,
-                        children: [
-                          const TeacherDirectoryScreen(),
-                          AdminTrainingScreen(user: user),
-                          const DutyScheduleScreen(),
-                          const KpiScreen(),
-                          const LeaveScreen(),
-                          const ReportScreen(),
-                        ],
-                      ),
-                    ),
+                        child: IndexedStack(
+                            index: _currentIndex, children: screens)),
                   ],
                 ),
           bottomNavigationBar: isNarrow
               ? BottomNavigationBar(
+                  type: BottomNavigationBarType.fixed,
                   backgroundColor: AppTheme.canvasBase,
                   currentIndex: _currentIndex,
-                  onTap: (int index) => setState(() => _currentIndex = index),
+                  onTap: _goTo,
                   selectedItemColor: AppTheme.primaryColor,
                   unselectedItemColor: AppTheme.textMuted,
+                  selectedFontSize: 10,
+                  unselectedFontSize: 10,
                   items: const [
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.home), label: 'Home'),
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.bookOpen), label: 'Training'),
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.calendarDays), label: 'Schedule'),
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.barChart2), label: 'KPI'),
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.calendarOff), label: 'Leaves'),
-                    BottomNavigationBarItem(icon: Icon(LucideIcons.alertTriangle), label: 'Reports'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.home), label: 'Home'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.users), label: 'Teachers'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.bookOpen), label: 'Training'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.calendarDays),
+                        label: 'Schedule'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.barChart2), label: 'KPI'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.calendarOff), label: 'Leaves'),
+                    BottomNavigationBarItem(
+                        icon: Icon(LucideIcons.alertTriangle),
+                        label: 'Reports'),
                   ],
                 )
               : null,
         );
       },
+    );
+  }
+}
+
+// ── Simple admin home screen ──────────────────────────────────────────────────
+
+class _AdminHomeScreen extends StatelessWidget {
+  final dynamic user;
+  final void Function(int) onNavigate;
+
+  const _AdminHomeScreen({required this.user, required this.onNavigate});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome, ${user.fullName}',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Admin Portal — manage your school from here.',
+            style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+          ),
+          const SizedBox(height: 24),
+          _sectionTitle('Quick Access'),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: [
+              _quickCard(context, LucideIcons.users, 'Teachers',
+                  'View & manage records', AppTheme.primaryColor, () => onNavigate(1)),
+              _quickCard(context, LucideIcons.bookOpen, 'Training',
+                  'Manage training posts', Colors.indigo, () => onNavigate(2)),
+              _quickCard(context, LucideIcons.calendarDays, 'Schedule',
+                  'Duty assignments', Colors.teal, () => onNavigate(3)),
+              _quickCard(context, LucideIcons.barChart2, 'KPI',
+                  'Performance scores', Colors.orange, () => onNavigate(4)),
+              _quickCard(context, LucideIcons.calendarOff, 'Leaves',
+                  'Leave requests', Colors.purple, () => onNavigate(5)),
+              _quickCard(context, LucideIcons.alertTriangle, 'Reports',
+                  'Incident reports', Colors.red, () => onNavigate(6)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) => Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      );
+
+  Widget _quickCard(BuildContext context, IconData icon, String title,
+      String subtitle, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.subtleGrayBoundary),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const Spacer(),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          ],
+        ),
+      ),
     );
   }
 }

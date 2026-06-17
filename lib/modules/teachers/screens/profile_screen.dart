@@ -105,10 +105,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
+    if (file.bytes == null || file.bytes!.isEmpty) {
+      _showSnack('Could not read file data. Please try again.', isError: true);
+      return;
+    }
+
     setState(() => _uploadingDocKey = docKey);
 
     try {
-      // OCR check (no-op on Windows — see ocr_service.dart)
+      // OCR check (no-op on Android/Windows stub — see ocr_service.dart)
       final ocrWarnings = await OcrService.validateDocument(
         imagePath: file.path,
         docType: docKey,
@@ -637,13 +642,18 @@ class _DocumentCard extends StatelessWidget {
         ),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Row 1: icon + full-width name
         Row(children: [
-          Icon(LucideIcons.fileText, size: 16, color: statusColor),
-          const SizedBox(width: 10),
+          Icon(LucideIcons.fileText, size: 15, color: statusColor),
+          const SizedBox(width: 8),
           Expanded(
-              child: Text(docName,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-          // Status chip
+            child: Text(docName,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        // Row 2: status chip + spacer + upload button
+        Row(children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
@@ -659,8 +669,7 @@ class _DocumentCard extends StatelessWidget {
                       fontSize: 11, color: statusColor, fontWeight: FontWeight.w600)),
             ]),
           ),
-          const SizedBox(width: 10),
-          // Upload button
+          const Spacer(),
           SizedBox(
             height: 32,
             child: isUploading

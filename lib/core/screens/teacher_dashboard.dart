@@ -59,7 +59,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 12)
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 12)
           ]
         ),
         child: BottomNavigationBar(
