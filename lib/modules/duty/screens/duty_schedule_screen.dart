@@ -1,113 +1,244 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 import '../models/duty.dart';
 import '../services/duty_service.dart';
-import '../../../app_theme.dart';
 
-class DutyScheduleScreen extends StatelessWidget {
-  const DutyScheduleScreen({Key? key}) : super(key: key);
+/// =======================
+/// TIME HELPERS (CORE ENGINE)
+/// =======================
+extension TimeX on String {
+  int toMinutes() {
+    final parts = split(":");
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+  }
+}
+
+/// =======================
+/// POSITION MODEL
+/// =======================
+class PositionedTask {
+  final DutyAssignment task;
+  final int lane;
+  final int laneCount;
+
+  PositionedTask({
+    required this.task,
+    required this.lane,
+    required this.laneCount,
+  });
+}
+
+/// =======================
+/// CALENDAR ENGINE SCREEN
+/// =======================
+class DutyScheduleScreen extends StatefulWidget {
+  const DutyScheduleScreen({super.key});
 
   @override
+  State<DutyScheduleScreen> createState() => _DutyCalendarEngineState();
+}
+
+class _DutyCalendarEngineState extends State<DutyScheduleScreen> {
+  final DutyService db = DutyService();
+
+  bool showByLocation = true;
+
+  static const double hourHeight = 60;
+  static const int startHour = 7;
+
+  /// =======================
+  /// TIME → Y POSITION
+  /// =======================
+  double timeToY(String time) {
+    final minutes = time.toMinutes();
+    return ((minutes - startHour * 60) / 60) * hourHeight;
+  }
+
+  /// =======================
+  /// DURATION → HEIGHT
+  /// =======================
+  double durationHeight(String start, String end) {
+    return (end.toMinutes() - start.toMinutes()) * (hourHeight / 60);
+  }
+
+  /// =======================
+  /// LANE ALLOCATION ENGINE
+  /// =======================
+  List<PositionedTask> allocateLanes(List<DutyAssignment> tasks) {
+    tasks.sort((a, b) =>
+        a.timeStart.toMinutes().compareTo(b.timeStart.toMinutes()));
+
+    List<List<DutyAssignment>> lanes = [];
+
+    for (final task in tasks) {
+      bool placed = false;
+
+      for (int i = 0; i < lanes.length; i++) {
+        final last = lanes[i].last;
+
+        if (task.timeStart.toMinutes() >= last.timeEnd.toMinutes()) {
+          lanes[i].add(task);
+          placed = true;
+          break;
+        }
+      }
+
+      if (!placed) {
+        lanes.add([task]);
+      }
+    }
+
+    final result = <PositionedTask>[];
+
+    for (int i = 0; i < lanes.length; i++) {
+      for (final task in lanes[i]) {
+        result.add(PositionedTask(
+          task: task,
+          lane: i,
+          laneCount: lanes.length,
+        ));
+      }
+    }
+
+    return result;
+  }
+
+  /// =======================
+  /// UI BUILD
+  /// =======================
+  @override
   Widget build(BuildContext context) {
-    final DutyService db = DutyService();
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // TODO: create task (principal only)
+        },
+        child: const Icon(Icons.add),
+      ),
+      body: StreamBuilder<List<DutyAssignment>>(
+        stream: db.getAssignmentsForDate(
+          DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        ),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Master Schedule', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Container(
-            height: 100,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFF0EFEC)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text('Calendar Grid Placeholder'),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          final tasks = snapshot.data!;
+          final positioned = allocateLanes(tasks);
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: SizedBox(
+                width: 1200,
+                height: 12 * hourHeight,
+                child: Stack(
                   children: [
-                    const Text('Tasks for Selected Date', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    StreamBuilder<List<DutyAssignment>>(
-                      stream: db.getAssignmentsForDate(DateFormat('yyyy-MM-dd').format(DateTime.now())),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator();
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) return const Text("No tasks.");
+                    _buildTimeGrid(),
 
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            final duty = snapshot.data![index];
-                            return Card(
-                              child: ListTile(
-                                title: Text(duty.taskName),
-                                subtitle: Text('${duty.locationName} • ${duty.timeStart}-${duty.timeEnd}'),
-                                trailing: Text(
-                                  duty.status,
-                                  style: TextStyle(color: duty.status == 'completed' ? Colors.green : Colors.orange),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    )
+                    ...positioned.map((p) {
+                      final top = timeToY(p.task.timeStart);
+                      final height = durationHeight(
+                          p.task.timeStart, p.task.timeEnd);
+
+                      const laneWidth = 180.0;
+                      final left = 80 + (p.lane * laneWidth);
+
+                      return Positioned(
+                        top: top,
+                        left: left,
+                        child: _buildTaskBlock(p, height, laneWidth),
+                      );
+                    }),
                   ],
                 ),
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                flex: 1,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Negotiation Swaps', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Sarah wants to swap with David for Main Gate Duty.'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                TextButton(
-                                  onPressed: () {},
-                                  child: const Text('Reject', style: TextStyle(color: Colors.red)),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {},
-                                  child: const Text('Accept'),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-              )
-            ],
-          )
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// =======================
+  /// TASK BLOCK UI
+  /// =======================
+  Widget _buildTaskBlock(
+      PositionedTask p, double height, double laneWidth) {
+    return Container(
+      width: laneWidth - 10,
+      height: height,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade400,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            p.task.taskName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            p.task.locationName,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+            ),
+          ),
+          Text(
+            "${p.task.timeStart} - ${p.task.timeEnd}",
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// =======================
+  /// BACKGROUND GRID
+  /// =======================
+  Widget _buildTimeGrid() {
+    return SizedBox(
+      width: 1200,
+      height: 12 * hourHeight,
+      child: Column(
+        children: List.generate(12, (i) {
+          final hour = startHour + i;
+
+          return Container(
+            height: hourHeight,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  "${hour.toInt()}:00",
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

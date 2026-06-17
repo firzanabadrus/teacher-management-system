@@ -1,91 +1,91 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../modules/teachers/models/teacher.dart';
+import 'package:flutter/foundation.dart';
 import '../../modules/duty/models/duty.dart';
+import '../../modules/teachers/services/teacher_seeder.dart';
 
 class DatabaseSeeder {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // Bump this string to force a full reseed on next app launch.
+  static const String _seedVersion = '2.1';
 
   static Future<void> seedDatabase() async {
     try {
-      // Seed Teachers if empty
-      final teachersSnap = await _db.collection('teachers').limit(1).get();
-      if (teachersSnap.docs.isEmpty) {
-        await _seedTeachers();
+      final configDoc = await _db.collection('_config').doc('seed').get();
+      if (configDoc.exists && configDoc.data()?['version'] == _seedVersion) {
+        return;
       }
 
-      // Seed Locations if empty
-      final locationsSnap = await _db.collection('duty_locations').limit(1).get();
-      if (locationsSnap.docs.isEmpty) {
-        await _seedLocations();
-      }
+      await TeacherSeeder.seed();
+      await _seedLocations();
+      await _seedTasks();
 
-      // Seed Tasks if empty
-      final tasksSnap = await _db.collection('duty_tasks').limit(1).get();
-      if (tasksSnap.docs.isEmpty) {
-        await _seedTasks();
-      }
-      
-      print("Database Seeding Completed Successfully.");
+      await _db.collection('_config').doc('seed').set({
+        'version': _seedVersion,
+        'seededAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('Database seeding v$_seedVersion complete.');
     } catch (e) {
-      print("Error seeding database: \$e");
+      debugPrint('Error seeding database: $e');
     }
-  }
-
-  static Future<void> _seedTeachers() async {
-    final batch = _db.batch();
-    
-    final teachers = [
-      TeacherRecord(
-        id: 't_sarah', username: 'sarah.j', email: 'sarah.j@school.edu', fullName: 'Sarah Jenkins',
-        role: 'teacher', icNumber: '890101-10-1234', gender: 'Female', dob: '1989-01-01',
-        address: '123 Edu Lane', phoneNumber: '012-3456789', maritalStatus: 'Single',
-        emergencyContactName: 'John Jenkins', emergencyContactNumber: '012-9876543',
-        currentScore: 85, yearlyKpi: 90, status: 'active', documents: {}
-      ),
-      TeacherRecord(
-        id: 'p_admin', username: 'principal', email: 'admin@school.edu', fullName: 'Principal Smith',
-        role: 'principal', icNumber: '750101-10-1234', gender: 'Male', dob: '1975-01-01',
-        address: '1 Admin Way', phoneNumber: '011-3456789', maritalStatus: 'Married',
-        emergencyContactName: 'Mary Smith', emergencyContactNumber: '011-9876543',
-        currentScore: 100, yearlyKpi: 100, status: 'active', documents: {}
-      ),
-    ];
-
-    for (var teacher in teachers) {
-      final docRef = _db.collection('teachers').doc(teacher.id);
-      batch.set(docRef, teacher.toMap());
-    }
-
-    await batch.commit();
   }
 
   static Future<void> _seedLocations() async {
+    final snap = await _db.collection('duty_locations').limit(1).get();
+    if (snap.docs.isNotEmpty) return;
+
     final batch = _db.batch();
     final locs = [
       DutyLocation(id: 'loc_hall', name: 'Assembly Hall', description: 'Main gathering hall'),
       DutyLocation(id: 'loc_gate', name: 'Main Gate', description: 'Front entrance'),
+      DutyLocation(id: 'loc_canteen', name: 'Canteen', description: 'School cafeteria area'),
+      DutyLocation(id: 'loc_carpark', name: 'Car Park', description: 'Student drop-off car park'),
     ];
-
-    for (var loc in locs) {
-      final docRef = _db.collection('duty_locations').doc(loc.id);
-      batch.set(docRef, loc.toMap());
+    for (final loc in locs) {
+      batch.set(_db.collection('duty_locations').doc(loc.id), loc.toMap());
     }
     await batch.commit();
   }
 
   static Future<void> _seedTasks() async {
+    final snap = await _db.collection('duty_tasks').limit(1).get();
+    if (snap.docs.isNotEmpty) return;
+
     final batch = _db.batch();
     final tasks = [
       DutyTask(
-        id: 'task_arrival', name: 'Morning Arrival', timeStart: '07:00', timeEnd: '07:30',
-        frequency: 'Daily', locations: ['loc_gate'], minPeople: 2,
-        checklistTemplates: ['Greet students', 'Check uniform'],
+        id: 'task_arrival',
+        name: 'Morning Arrival',
+        timeStart: '07:00',
+        timeEnd: '07:30',
+        frequency: 'Daily',
+        locations: ['loc_gate'],
+        minPeople: 2,
+        checklistTemplates: ['Greet students', 'Check uniform', 'Monitor traffic'],
+      ),
+      DutyTask(
+        id: 'task_recess',
+        name: 'Recess Supervision',
+        timeStart: '10:00',
+        timeEnd: '10:30',
+        frequency: 'Daily',
+        locations: ['loc_canteen'],
+        minPeople: 3,
+        checklistTemplates: ['Monitor canteen queue', 'Ensure cleanliness', 'Check student behaviour'],
+      ),
+      DutyTask(
+        id: 'task_dismissal',
+        name: 'School Dismissal',
+        timeStart: '13:00',
+        timeEnd: '13:30',
+        frequency: 'Daily',
+        locations: ['loc_gate', 'loc_carpark'],
+        minPeople: 4,
+        checklistTemplates: ['Guide students to vehicles', 'Monitor car park traffic', 'Ensure all students are collected'],
       ),
     ];
-
-    for (var task in tasks) {
-      final docRef = _db.collection('duty_tasks').doc(task.id);
-      batch.set(docRef, task.toMap());
+    for (final task in tasks) {
+      batch.set(_db.collection('duty_tasks').doc(task.id), task.toMap());
     }
     await batch.commit();
   }

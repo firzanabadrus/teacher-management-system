@@ -35,6 +35,7 @@ Future<void> _initFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await DatabaseSeeder.seedDatabase();
   } catch (e, stack) {
     debugPrint('Firebase init failed: $e');
     debugPrint('$stack');
