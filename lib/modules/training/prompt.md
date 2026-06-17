@@ -1,6 +1,11 @@
 You are working inside an existing Flutter + Firebase CPD Training module.
 
-Current architecture already exists:
+You MUST focus ONLY on debugging and fixing issues. Do NOT refactor architecture or rewrite unrelated code.
+
+Allowed scope:
+- lib/modules/training/** only
+
+Existing structure:
 - models/training.dart
 - services/training_service.dart
 - providers/training_provider.dart
@@ -8,225 +13,157 @@ Current architecture already exists:
 - screens/teacher_training.dart
 
 Firebase is already configured and working.
-Do NOT refactor the project structure. Only extend and fix existing code.
 
 ---
 
-# 🎯 TASK OVERVIEW
+# 🎯 TASK 1 — FIX APPLY ERROR (CRITICAL)
 
-You must implement feature enhancements + UI bug fixes for the CPD Training Social Feed module.
-
----
-
-# 🧩 PART 1 — CRITICAL UI BUG FIXES
-
-## 1. Admin screen right overflow (63px issue)
-
-Fix horizontal overflow in admin interface.
-
-Requirements:
-- Ensure all Row widgets use:
-  - Expanded
-  - Flexible
-  - or SingleChildScrollView (horizontal if needed)
-- Prevent any widget from exceeding screen width
-- Ensure responsive layout for:
-  - form inputs
-  - buttons
-  - application lists
-
-NO hardcoded widths allowed.
+## Error:
+dart exception thrown from converted future
+Use properties 'error' and 'stack' to debug
 
 ---
 
-## 2. Keyboard bottom overflow (46px issue)
+## REQUIREMENTS:
 
-Fix bottom overflow when keyboard appears.
+When a user applies for training:
 
-Requirements:
-- Wrap main admin layout with:
-  - SingleChildScrollView OR
-  - SafeArea + ResizeToAvoidBottomInset
-- Ensure form fields remain visible when keyboard opens
-- Add proper padding using MediaQuery viewInsets
-
-Must fully eliminate overflow warnings.
+- Locate applyTraining / application submission logic
+- Wrap ALL async Firestore calls in proper try-catch
+- Ensure errors are NOT swallowed or converted incorrectly
+- Log and return actual Firebase error message and stack trace
 
 ---
 
-# 🧩 PART 2 — POST INTERACTION ENHANCEMENTS
+## MUST FIX:
 
-## 3. Image upload from local storage
-
-When user (teacher or principal) creates a post:
-
-Add ability to:
-- click image upload button inside post composer
-- pick image from device storage
-- upload to Firebase Storage
-- store returned image URL in Firestore (photoUrl field)
-
-Requirements:
-- Use image_picker package
-- Create reusable function in training_service:
-  uploadImageToStorage()
-
-- Must support:
-  - admin post
-  - teacher post
-  - training post
+- incorrect Future conversion
+- missing await handling
+- improper async chain in provider/service
+- null or invalid postId / teacherId submissions
 
 ---
 
-## 4. Clickable links inside posts
+## EXPECTED RESULT:
 
-Enable hyperlink detection in post content.
-
-Requirements:
-- Detect URLs inside post content
-- Render them as clickable links
-- On tap:
-  - open in external browser using url_launcher
-
-Ensure:
-- links work inside feed
-- links work inside comments if present
+- Teacher can apply successfully
+- If error occurs, it must show real Firebase error (not generic Dart exception wrapper)
 
 ---
 
-## 5. Search posts (teacher + principal)
+# 🎯 TASK 2 — FIX USER PROFILE LOAD FAILURE
 
-Add search functionality in feed.
+## Problem:
 
-Requirements:
-- Add search bar in teacher_training.dart and admin_training_screen.dart
-- Search by:
-  - trainingTitle
-  - content
-  - authorName
-
-Implementation:
-- Use Firestore query OR local filtering from provider stream
-- Must update results in real-time as user types
+Clicking on user avatar does NOT load profile or past posts.
 
 ---
 
-## 6. Profile view (Facebook-style post owner profile)
+## REQUIREMENTS:
 
-When clicking on post author avatar:
+Fix user profile system so that:
 
-Open profile page/modal showing:
-
-Required:
-- authorName
-- authorRole
-- all posts created by that user
-
-Feed requirements:
-- Display posts in chronological order
-- Same UI style as main feed
-- Allow:
-  - like posts
-  - comment on posts
-
-Data source:
-- Filter TrainingPost where authorId == selected userId
+- Clicking author avatar opens profile view
+- Profile fetches ALL posts by that user (authorId match)
+- Uses Firestore query:
+  where('authorId', isEqualTo: selectedUserId)
 
 ---
 
-# 🧩 PART 3 — SOCIAL INTERACTIONS
+## MUST IMPLEMENT:
 
-Ensure existing features remain functional:
-- like system
-- comments system
-- trainee application system
-
-BUT extend them to:
-- support real-time UI updates
-- reflect changes instantly in feed and profile view
+- Ensure query is correct and indexed
+- Ensure provider updates state properly
+- Ensure UI rebuilds when data is received
+- Handle empty state properly (no posts)
 
 ---
 
-# 🧠 SERVICE LAYER RULES (STRICT)
+## EXPECTED RESULT:
 
-All Firebase logic MUST be inside:
-services/training_service.dart
-
-Add or extend functions:
-
-- uploadImageToStorage()
-- searchPosts(query)
-- getPostsByAuthor(authorId)
-- openLink(url handling is UI but detection helper can be here if needed)
-
-NO Firestore calls inside UI or provider directly.
+- Facebook-style profile view
+- Shows all historical posts of selected user
+- Real-time or streamed updates preferred
 
 ---
 
-# 📦 PROVIDER RULES
+# 🎯 TASK 3 — FIX FIREBASE STORAGE ERROR (CRITICAL)
 
-training_provider.dart must:
-
-- expose search state
-- manage filtered post list
-- maintain full post stream
-- support profile post filtering state
-- ensure real-time sync with Firestore
+## Error:
+[firebase_storage/object-not-found] No object exists at the desired reference
 
 ---
 
-# 📱 UI REQUIREMENTS
+## REQUIREMENTS:
 
-## teacher_training.dart
-Must include:
-- feed
-- search bar
-- image upload post composer
-- clickable links in posts
-- profile navigation on avatar click
+In training_service.dart:
 
----
-
-## admin_training_screen.dart
-Must include:
-- fixed layout (no overflow)
-- post creation with image upload
-- search bar
-- application approval system
-- profile navigation support
+- Fix uploadImageToStorage logic
+- Ensure correct Storage reference path
+- Ensure upload completes BEFORE getDownloadURL()
+- Do NOT manually construct download URLs
+- Ensure same reference is used for upload and retrieval
 
 ---
 
-## profile view (new or modal)
-Must show:
-- user info header
-- list of all their posts
-- interactive feed behavior
+## MUST ENSURE:
+
+- Unique file naming (timestamp or UUID)
+- await uploadTask completion
+- correct Firebase Storage bucket path
+
+---
+
+# 🎯 TASK 4 — FIX UI OVERFLOW ISSUES
+
+## Problems:
+- Right overflow in image preview (~35px)
+- Bottom overflow when keyboard appears (~49px)
+
+---
+
+## REQUIREMENTS:
+
+### Image preview fix:
+- Use Flexible / Expanded / ConstrainedBox
+- Ensure no fixed width usage
+- Use BoxFit.cover or contain properly
+
+---
+
+### Keyboard overflow fix:
+- Wrap screen with SafeArea
+- Use Scaffold(resizeToAvoidBottomInset: true)
+- Use SingleChildScrollView where needed
+- Add padding using MediaQuery.viewInsets.bottom
+
+---
+
+## EXPECTED RESULT:
+
+- No RenderFlex overflow errors
+- Fully responsive UI on all screen sizes
+- Works with keyboard open/close
 
 ---
 
 # ⚠️ CONSTRAINTS
 
-- Do NOT change project structure
-- Do NOT remove existing models
-- Do NOT break Firestore schema
-- Must use existing TrainingPost / TrainingComment / TrainingApplication models
-- Must maintain null safety
-- Must ensure responsive UI on mobile screens
-- Must not introduce duplicated service logic
+- DO NOT modify files outside lib/modules/training/**
+- DO NOT refactor entire architecture
+- DO NOT change Firestore schema
+- DO NOT remove existing features
+- DO NOT introduce new state management libraries
+- MUST preserve real-time feed behavior
 
 ---
 
 # 🎯 FINAL EXPECTATION
 
-After implementation:
+After fixes:
 
-1. Admin UI has no overflow issues
-2. Keyboard no longer causes bottom overflow
-3. Users can upload images to posts
-4. Links in posts are clickable and open browser
-5. Search works in both admin and teacher feeds
-6. Clicking profile shows all past posts (Facebook-style)
-7. System remains fully real-time with Firebase
-
-Build this as production-quality Flutter code.
+1. Training application works without Dart Future conversion error
+2. User profile loads all past posts correctly
+3. Firebase Storage upload works without object-not-found error
+4. UI has no overflow issues anywhere in training module
+5. System remains stable, real-time, and production-ready

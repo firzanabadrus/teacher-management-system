@@ -1,10 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app_theme.dart';
 import '../../../modules/teachers/models/teacher.dart';
@@ -34,7 +34,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
   bool _isUploadingImage = false;
   bool _isCpd = true;
   String _enrollmentMode = 'open_volunteer';
-  String _fontStyle = 'sans';
+  
 
   @override
   void dispose() {
@@ -53,25 +53,28 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<TrainingProvider>();
 
-    return SafeArea(
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildSearchBar(provider),
-            const SizedBox(height: 16),
-            _buildCreatePanel(provider),
-            const SizedBox(height: 16),
-            _buildFeedPanel(provider),
-            const SizedBox(height: 16),
-            _buildApplicationsPanel(provider),
-            const SizedBox(height: 16),
-            _buildAssignmentPanel(provider),
-          ],
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildSearchBar(provider),
+              const SizedBox(height: 16),
+              _buildCreatePanel(provider),
+              const SizedBox(height: 16),
+              _buildFeedPanel(provider),
+              const SizedBox(height: 16),
+              _buildApplicationsPanel(provider),
+              const SizedBox(height: 16),
+              _buildAssignmentPanel(provider),
+            ],
+          ),
         ),
       ),
     );
@@ -124,24 +127,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
                   const Expanded(child: Text('Training/CPD Session')),
                 ],
               ),
-              DropdownButtonFormField<String>(
-                  key: ValueKey(_fontStyle),
-                  initialValue: _fontStyle,
-                  items: const [
-                    DropdownMenuItem(value: 'sans', child: Text('Default')),
-                    DropdownMenuItem(
-                        value: 'console_mono', child: Text('Console Mono')),
-                    DropdownMenuItem(
-                        value: 'book_serif', child: Text('Book Serif')),
-                    DropdownMenuItem(
-                        value: 'playful_blue', child: Text('Playful Blue')),
-                    DropdownMenuItem(
-                        value: 'warm_gold', child: Text('Warm Gold')),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _fontStyle = value ?? 'sans'),
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(), isDense: true)),
+                const SizedBox.shrink(),
             ],
           ),
           if (_isCpd) ...[
@@ -308,7 +294,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
             _buildTrainingSummary(post),
           ],
           const SizedBox(height: 12),
-          _buildLinkedText(post.content),
+          _buildLinkedText(context, post.content),
           if (post.photoUrl.isNotEmpty) ...[
             const SizedBox(height: 12),
             ClipRRect(
@@ -407,7 +393,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
                         title: Text(comment.authorName,
                             style: const TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 13)),
-                        subtitle: _buildLinkedText(comment.text),
+                        subtitle: _buildLinkedText(context, comment.text),
                       ))
                   .toList(),
             );
@@ -603,7 +589,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
         likes: const [],
         commentsCount: 0,
         createdAt: DateTime.now(),
-        fontStyle: _fontStyle,
+        fontStyle: 'sans',
         isTraining: _isCpd,
         trainingTitle: _isCpd ? _titleController.text.trim() : null,
         trainingDescription: _isCpd ? _descriptionController.text.trim() : null,
@@ -624,7 +610,6 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
         _selectedImage = null;
         _isCpd = true;
         _enrollmentMode = 'open_volunteer';
-        _fontStyle = 'sans';
       });
     } catch (error) {
       if (!mounted) return;
@@ -661,6 +646,20 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
             label: Text(_selectedImage == null ? 'Add image' : 'Change image'),
           ),
           const SizedBox(width: 12),
+          if (_selectedImage != null)
+            Flexible(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Image.file(
+                    File(_selectedImage!.path),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          if (_selectedImage != null) const SizedBox(width: 12),
           Expanded(
             child: Text(
               _selectedImage?.name ?? 'No image selected',
@@ -689,17 +688,17 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
     setState(() => _selectedImage = image);
   }
 
-  Widget _buildLinkedText(String text) {
+  Widget _buildLinkedText(BuildContext context, String text) {
     return RichText(
       text: TextSpan(
         style: const TextStyle(color: AppTheme.textColor, height: 1.35),
-        children: _linkSpans(text),
+        children: _linkSpans(context, text),
       ),
     );
   }
 
-  List<TextSpan> _linkSpans(String text) {
-    final regex = RegExp(r'(https?:\/\/[^\s]+)');
+  List<TextSpan> _linkSpans(BuildContext context, String text) {
+    final regex = RegExp(r'((?:https?:\/\/)?(?:www\.)?[^\s]+\.[^\s]{2,})');
     final spans = <TextSpan>[];
     var index = 0;
     for (final match in regex.allMatches(text)) {
@@ -711,7 +710,8 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
         text: url,
         style: const TextStyle(
             color: Colors.blue, decoration: TextDecoration.underline),
-        recognizer: TapGestureRecognizer()..onTap = () => _openLink(url),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => context.read<TrainingProvider>().openUrl(url),
       ));
       index = match.end;
     }
@@ -719,14 +719,7 @@ class _AdminTrainingScreenState extends State<AdminTrainingScreen> {
     return spans;
   }
 
-  Future<void> _openLink(String url) async {
-    final uri = Uri.parse(url);
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not open $url')));
-    }
-  }
+  
 
   Future<void> _showFacultyProfile(
       TrainingProvider provider, String authorId) async {

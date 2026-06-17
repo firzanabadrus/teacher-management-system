@@ -1,12 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
-import '../../modules/duty/models/duty.dart';
-import '../../modules/teachers/services/teacher_seeder.dart';
-
+// Seeding removed. This file can be deleted if nothing imports it.
 class DatabaseSeeder {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   // Bump this string to force a full reseed on next app launch.
-  static const String _seedVersion = '2.2';
+  static const String _seedVersion = '2.1';
 
   static Future<void> seedDatabase() async {
     try {

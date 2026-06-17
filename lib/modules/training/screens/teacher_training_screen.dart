@@ -1,10 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app_theme.dart';
 import '../../teachers/models/teacher.dart';
@@ -27,7 +27,6 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
   XFile? _selectedImage;
   bool _isCreatorExpanded = false;
   bool _isUploadingImage = false;
-  String _fontStyle = 'sans';
 
   @override
   void dispose() {
@@ -44,55 +43,65 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
     final provider = context.watch<TrainingProvider>();
     final posts = provider.teacherPosts();
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: _searchController,
-            onChanged: provider.updateSearchQuery,
-            decoration: InputDecoration(
-              hintText: 'Search posts, training, authors...',
-              prefixIcon: const Icon(LucideIcons.search),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-            ),
-          ),
-        ),
-        _buildCreator(provider),
-        Expanded(
-          child: StreamBuilder<List<TrainingApplication>>(
-            stream: provider.applicationsForTeacher(widget.user.id),
-            builder: (context, applicationSnapshot) {
-              final applications = applicationSnapshot.data ?? [];
-              final appByPost = {
-                for (final app in applications) app.postId: app,
-              };
-
-              if (provider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (posts.isEmpty) {
-                return const Center(child: Text('No posts yet.'));
-              }
-
-              return ListView.builder(
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          child: Column(
+            children: [
+              Padding(
                 padding: const EdgeInsets.all(16),
-                itemCount: posts.length,
-                itemBuilder: (context, index) => _buildPostCard(
-                  provider,
-                  posts[index],
-                  appByPost[posts[index].id],
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: provider.updateSearchQuery,
+                  decoration: InputDecoration(
+                    hintText: 'Search posts, training, authors...',
+                    prefixIcon: const Icon(LucideIcons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
                 ),
-              );
-            },
+              ),
+              _buildCreator(provider),
+              Expanded(
+                child: StreamBuilder<List<TrainingApplication>>(
+                  stream: provider.applicationsForTeacher(widget.user.id),
+                  builder: (context, applicationSnapshot) {
+                    final applications = applicationSnapshot.data ?? [];
+                    final appByPost = {
+                      for (final app in applications) app.postId: app,
+                    };
+
+                    if (provider.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (posts.isEmpty) {
+                      return const Center(child: Text('No posts yet.'));
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) => _buildPostCard(
+                        provider,
+                        posts[index],
+                        appByPost[posts[index].id],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -151,28 +160,8 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
                     onPressed: () => _contentController.text =
                         '${_contentController.text} https://',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      key: ValueKey(_fontStyle),
-                      initialValue: _fontStyle,
-                      items: const [
-                        DropdownMenuItem(value: 'sans', child: Text('Default')),
-                        DropdownMenuItem(
-                            value: 'console_mono', child: Text('Console Mono')),
-                        DropdownMenuItem(
-                            value: 'book_serif', child: Text('Book Serif')),
-                        DropdownMenuItem(
-                            value: 'playful_blue', child: Text('Playful Blue')),
-                        DropdownMenuItem(
-                            value: 'warm_gold', child: Text('Warm Gold')),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _fontStyle = value ?? 'sans'),
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(), isDense: true),
-                    ),
-                  ),
+                    const SizedBox(width: 8),
+                    const Spacer(),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: _isUploadingImage
@@ -369,7 +358,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
 
             return Column(
               children: comments
-                  .map((comment) => ListTile(
+                    .map((comment) => ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
@@ -378,17 +367,18 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
                         title: Text(comment.authorName,
                             style: const TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 13)),
-                        subtitle: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                                color: AppTheme.textColor, height: 1.3),
-                            children: _linkSpans(
-                              comment.text,
-                              const TextStyle(
+                          subtitle: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(
                                   color: AppTheme.textColor, height: 1.3),
+                              children: _linkSpans(
+                                context,
+                                comment.text,
+                                const TextStyle(
+                                    color: AppTheme.textColor, height: 1.3),
+                              ),
                             ),
                           ),
-                        ),
                       ))
                   .toList(),
             );
@@ -432,7 +422,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: lines.map((line) {
+                children: lines.map((line) {
         final trimmed = line.trimLeft();
         if (trimmed.startsWith('- ')) {
           return Padding(
@@ -446,7 +436,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
                         text: TextSpan(
                             style: style,
                             children:
-                                _linkSpans(trimmed.substring(2), style)))),
+                                _linkSpans(context, trimmed.substring(2), style)))),
               ],
             ),
           );
@@ -455,7 +445,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: RichText(
-              text: TextSpan(style: style, children: _linkSpans(line, style))),
+              text: TextSpan(style: style, children: _linkSpans(context, line, style))),
         );
       }).toList(),
     );
@@ -489,8 +479,8 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
     }
   }
 
-  List<TextSpan> _linkSpans(String text, TextStyle style) {
-    final regex = RegExp(r'(https?:\/\/[^\s]+)');
+  List<TextSpan> _linkSpans(BuildContext context, String text, TextStyle style) {
+    final regex = RegExp(r'((?:https?:\/\/)?(?:www\.)?[^\s]+\.[^\s]{2,})');
     final spans = <TextSpan>[];
     var index = 0;
     for (final match in regex.allMatches(text)) {
@@ -502,7 +492,8 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
         text: url,
         style: style.copyWith(
             color: Colors.blue, decoration: TextDecoration.underline),
-        recognizer: TapGestureRecognizer()..onTap = () => _showLink(url),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => context.read<TrainingProvider>().openUrl(url),
       ));
       index = match.end;
     }
@@ -531,7 +522,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
         likes: const [],
         commentsCount: 0,
         createdAt: DateTime.now(),
-        fontStyle: _fontStyle,
+        fontStyle: 'sans',
         isTraining: false,
         traineeIds: const [],
       ));
@@ -702,6 +693,20 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
             label: Text(_selectedImage == null ? 'Add image' : 'Change image'),
           ),
           const SizedBox(width: 12),
+          if (_selectedImage != null)
+            Flexible(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Image.file(
+                    File(_selectedImage!.path),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          if (_selectedImage != null) const SizedBox(width: 12),
           Expanded(
             child: Text(
               _selectedImage?.name ?? 'No image selected',
@@ -730,14 +735,7 @@ class _TeacherTrainingScreenState extends State<TeacherTrainingScreen> {
     setState(() => _selectedImage = image);
   }
 
-  Future<void> _showLink(String url) async {
-    final uri = Uri.parse(url);
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not open $url')));
-    }
-  }
+  
 
   String _profileValue(Object? value) => (value ?? '').toString().trim();
 
