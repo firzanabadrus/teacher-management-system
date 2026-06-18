@@ -44,7 +44,7 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
       color: const Color(0xFFF2F1EE),
       child: Column(
         children: [
-          // ── Profile header ────────────────────────────────────
+          // ── Profile header ──────────────────────────────────
           Container(
             color: const Color(0xFFF2F1EE),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -85,7 +85,8 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFE8E8E5)),
+                        border:
+                            Border.all(color: const Color(0xFFE8E8E5)),
                       ),
                       child: const Icon(Icons.logout,
                           size: 18, color: Color(0xFF1A1A1A)),
@@ -102,8 +103,9 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
                           value: score / 100,
                           minHeight: 6,
                           backgroundColor: Colors.grey.shade200,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF4CAF50)),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF4CAF50)),
                         ),
                       ),
                     ),
@@ -134,7 +136,7 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
             ),
           ),
 
-          // ── Tab Switcher ──────────────────────────────────────
+          // ── Tab Switcher ────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: StreamBuilder<List<FacilityReport>>(
@@ -146,19 +148,23 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE8E8E5)),
+                    border:
+                        Border.all(color: const Color(0xFFE8E8E5)),
                   ),
                   child: Row(
                     children: [
                       _TabButton(
                         label: 'File a Report',
                         selected: !_showHistory,
-                        onTap: () => setState(() => _showHistory = false),
+                        onTap: () =>
+                            setState(() => _showHistory = false),
                       ),
                       _TabButton(
-                        label: 'Report History${count > 0 ? ' ($count)' : ' (0)'}',
+                        label:
+                            'Report History${count > 0 ? ' ($count)' : ' (0)'}',
                         selected: _showHistory,
-                        onTap: () => setState(() => _showHistory = true),
+                        onTap: () =>
+                            setState(() => _showHistory = true),
                       ),
                     ],
                   ),
@@ -168,7 +174,7 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
           ),
           const SizedBox(height: 14),
 
-          // ── Content ───────────────────────────────────────────
+          // ── Content ─────────────────────────────────────────
           Expanded(
             child: _showHistory
                 ? _HistoryTab(user: widget.user)
@@ -188,7 +194,9 @@ class _TabButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _TabButton(
-      {required this.label, required this.selected, required this.onTap});
+      {required this.label,
+      required this.selected,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +207,8 @@ class _TabButton extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
+            color:
+                selected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: selected
                 ? [
@@ -217,8 +226,9 @@ class _TabButton extends StatelessWidget {
             child: Text(label,
                 style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                     color: selected
                         ? const Color(0xFF1A1A1A)
                         : Colors.grey.shade500)),
@@ -229,7 +239,7 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-// ── File a Report Tab (inline form) ──────────────────────────────────────────
+// ── File a Report Tab ─────────────────────────────────────────────────────────
 
 class _FileReportTab extends StatefulWidget {
   final TeacherRecord user;
@@ -242,7 +252,6 @@ class _FileReportTab extends StatefulWidget {
 class _FileReportTabState extends State<_FileReportTab> {
   final _descCtrl = TextEditingController();
   String _selectedCategory = kReportCategories.first;
-  String _priority = 'Low';
   Uint8List? _imageBytes;
   String? _imageName;
   bool _isSubmitting = false;
@@ -269,17 +278,17 @@ class _FileReportTabState extends State<_FileReportTab> {
 
   Future<void> _submit() async {
     if (_descCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please add a description.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add a description.')));
       return;
     }
 
-    // Confirmation dialog matching screenshot
     final confirmed = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.5),
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -315,13 +324,17 @@ class _FileReportTabState extends State<_FileReportTab> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context, false),
+                      onTap: () =>
+                          Navigator.pop(context, false),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0E0DD)),
+                          borderRadius:
+                              BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xFFE0E0DD)),
                         ),
                         child: const Center(
                           child: Text('Cancel',
@@ -336,12 +349,15 @@ class _FileReportTabState extends State<_FileReportTab> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context, true),
+                      onTap: () =>
+                          Navigator.pop(context, true),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14),
                         decoration: BoxDecoration(
                           color: const Color(0xFF8FA888),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(12),
                         ),
                         child: const Center(
                           child: Text('Yes, Submit',
@@ -371,7 +387,7 @@ class _FileReportTabState extends State<_FileReportTab> {
         teacherName: widget.user.fullName,
         category: _selectedCategory,
         description: _descCtrl.text.trim(),
-        priority: _priority,
+        priority: 'Low',
         createdAt: DateTime.now(),
         lastUpdated: DateTime.now(),
       );
@@ -381,11 +397,9 @@ class _FileReportTabState extends State<_FileReportTab> {
 
       if (!mounted) return;
 
-      // Reset form
       setState(() {
         _descCtrl.clear();
         _selectedCategory = kReportCategories.first;
-        _priority = 'Low';
         _imageBytes = null;
         _imageName = null;
         _isSubmitting = false;
@@ -394,268 +408,297 @@ class _FileReportTabState extends State<_FileReportTab> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Report submitted successfully!'),
           backgroundColor: Colors.green));
-
     } catch (e) {
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      children: [
-        // ── Main form card ──────────────────────────────────────
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE8E8E5)),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category dropdown
-              _FieldLabel('SELECT REPORT CATEGORY'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFD8D8D5)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCategory,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                    style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF1A1A1A),
-                        fontWeight: FontWeight.w500),
-                    items: kReportCategories
-                        .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c,
-                                style: const TextStyle(fontSize: 14))))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedCategory = v ?? _selectedCategory),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Description
-              _FieldLabel('DESCRIPTION'),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFD8D8D5)),
-                ),
-                child: TextField(
-                  controller: _descCtrl,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText:
-                        'Provide specific details of the incident, including dates, locations, and any direct impact...',
-                    hintStyle: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 13,
-                        height: 1.5),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(14),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Photo upload
-              _FieldLabel('ATTACH PHOTO/EVIDENCE'),
-              const SizedBox(height: 10),
-
-              if (_imageBytes != null) ...[
-                // Preview
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(_imageBytes!,
-                          width: double.infinity,
-                          height: 180,
-                          fit: BoxFit.cover),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () =>
-                            setState(() {
-                              _imageBytes = null;
-                              _imageName = null;
-                            }),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(20)),
-                          child: const Icon(Icons.close,
-                              color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => _pickImage(ImageSource.gallery),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: const Color(0xFFD8D8D5),
-                          style: BorderStyle.solid),
-                    ),
-                    child: Center(
-                      child: Text('Change Photo',
-                          style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13)),
-                    ),
-                  ),
-                ),
-              ] else
-                Row(
-                  children: [
-                    // Gallery
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _pickImage(ImageSource.gallery),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 22),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F8F6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: const Color(0xFFE0E0DD),
-                                style: BorderStyle.solid),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(LucideIcons.upload,
-                                  size: 26, color: Colors.grey.shade500),
-                              const SizedBox(height: 8),
-                              Text('From Gallery',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Colors.grey.shade700)),
-                              const SizedBox(height: 4),
-                              Text('Drag-and-drop or\nselect',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade400,
-                                      height: 1.4)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Camera
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _pickImage(ImageSource.camera),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 22),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F8F6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: const Color(0xFFE0E0DD),
-                                style: BorderStyle.solid),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(LucideIcons.camera,
-                                  size: 26, color: Colors.grey.shade400),
-                              const SizedBox(height: 8),
-                              Text('Take Photo',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Colors.grey.shade500)),
-                              const SizedBox(height: 4),
-                              Text('Use device\ncamera',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade400,
-                                      height: 1.4)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Submit button ──────────────────────────────────────
-        GestureDetector(
-          onTap: _isSubmitting ? null : _submit,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+    return Material(
+      color: Colors.transparent,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          // ── Main form card ────────────────────────────────
+          Container(
             decoration: BoxDecoration(
-              color: _isSubmitting
-                  ? Colors.grey.shade300
-                  : const Color(0xFFDDE5D8),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE8E8E5)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_isSubmitting)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                else
-                  Icon(LucideIcons.fileText,
-                      size: 18, color: Colors.grey.shade600),
-                const SizedBox(width: 10),
-                Text(
-                  _isSubmitting ? 'SUBMITTING...' : 'SUBMIT INCIDENT REPORT',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                    color: _isSubmitting
-                        ? Colors.grey.shade500
-                        : Colors.grey.shade700,
+                // Category
+                _FieldLabel('SELECT REPORT CATEGORY'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFD8D8D5)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCategory,
+                      isExpanded: true,
+                      icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 20),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF1A1A1A),
+                          fontWeight: FontWeight.w500),
+                      items: kReportCategories
+                          .map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c,
+                                  style: const TextStyle(
+                                      fontSize: 14))))
+                          .toList(),
+                      onChanged: (v) => setState(() =>
+                          _selectedCategory =
+                              v ?? _selectedCategory),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Description
+                _FieldLabel('DESCRIPTION'),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFD8D8D5)),
+                  ),
+                  child: TextField(
+                    controller: _descCtrl,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      hintText:
+                          'Provide specific details of the incident, including dates, locations, and any direct impact...',
+                      hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 13,
+                          height: 1.5),
+                      border: InputBorder.none,
+                      contentPadding:
+                          const EdgeInsets.all(14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Photo
+                _FieldLabel('ATTACH PHOTO/EVIDENCE'),
+                const SizedBox(height: 10),
+
+                if (_imageBytes != null) ...[
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                        child: Image.memory(_imageBytes!,
+                            width: double.infinity,
+                            height: 180,
+                            fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _imageBytes = null;
+                            _imageName = null;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius:
+                                    BorderRadius.circular(20)),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () =>
+                        _pickImage(ImageSource.gallery),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12),
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFFD8D8D5)),
+                      ),
+                      child: Center(
+                        child: Text('Change Photo',
+                            style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13)),
+                      ),
+                    ),
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () =>
+                              _pickImage(ImageSource.gallery),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 22),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F8F6),
+                              borderRadius:
+                                  BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: const Color(
+                                      0xFFE0E0DD)),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(LucideIcons.upload,
+                                    size: 26,
+                                    color: Colors.grey.shade500),
+                                const SizedBox(height: 8),
+                                Text('From Gallery',
+                                    style: TextStyle(
+                                        fontWeight:
+                                            FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors
+                                            .grey.shade700)),
+                                const SizedBox(height: 4),
+                                Text(
+                                    'Drag-and-drop or\nselect',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors
+                                            .grey.shade400,
+                                        height: 1.4)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () =>
+                              _pickImage(ImageSource.camera),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 22),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F8F6),
+                              borderRadius:
+                                  BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: const Color(
+                                      0xFFE0E0DD)),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(LucideIcons.camera,
+                                    size: 26,
+                                    color: Colors.grey.shade400),
+                                const SizedBox(height: 8),
+                                Text('Take Photo',
+                                    style: TextStyle(
+                                        fontWeight:
+                                            FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Colors
+                                            .grey.shade500)),
+                                const SizedBox(height: 4),
+                                Text('Use device\ncamera',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors
+                                            .grey.shade400,
+                                        height: 1.4)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-      ],
+          const SizedBox(height: 16),
+
+          // ── Submit button ─────────────────────────────────
+          GestureDetector(
+            onTap: _isSubmitting ? null : _submit,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: _isSubmitting
+                    ? Colors.grey.shade300
+                    : const Color(0xFFDDE5D8),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isSubmitting)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white),
+                    )
+                  else
+                    Icon(LucideIcons.fileText,
+                        size: 18, color: Colors.grey.shade600),
+                  const SizedBox(width: 10),
+                  Text(
+                    _isSubmitting
+                        ? 'SUBMITTING...'
+                        : 'SUBMIT INCIDENT REPORT',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: _isSubmitting
+                          ? Colors.grey.shade500
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
     );
   }
 }
@@ -685,7 +728,8 @@ class _HistoryTab extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('No reports submitted yet.',
                     style: TextStyle(
-                        color: Colors.grey.shade400, fontSize: 14)),
+                        color: Colors.grey.shade400,
+                        fontSize: 14)),
               ],
             ),
           );
@@ -693,7 +737,8 @@ class _HistoryTab extends StatelessWidget {
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           itemCount: reports.length,
-          itemBuilder: (_, i) => _HistoryCard(report: reports[i]),
+          itemBuilder: (_, i) =>
+              _HistoryCard(report: reports[i]),
         );
       },
     );
@@ -733,7 +778,8 @@ class _HistoryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(report.category,
                           style: const TextStyle(
@@ -756,15 +802,17 @@ class _HistoryCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Status badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: statusInfo.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color:
+                            statusInfo.color.withOpacity(0.1),
+                        borderRadius:
+                            BorderRadius.circular(20),
                         border: Border.all(
-                            color: statusInfo.color.withOpacity(0.3)),
+                            color: statusInfo.color
+                                .withOpacity(0.3)),
                       ),
                       child: Text(
                         statusInfo.label.toUpperCase(),
@@ -776,22 +824,24 @@ class _HistoryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Priority badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: priorityColor.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius:
+                            BorderRadius.circular(20),
                         border: Border.all(
-                            color: priorityColor.withOpacity(0.2)),
+                            color: priorityColor
+                                .withOpacity(0.2)),
                       ),
                       child: Text(
                         '${report.priority.toUpperCase()} PRIORITY',
                         style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            color: priorityColor.withOpacity(0.7),
+                            color:
+                                priorityColor.withOpacity(0.7),
                             letterSpacing: 0.5),
                       ),
                     ),
@@ -817,10 +867,12 @@ class _HistoryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Icon(LucideIcons.messageSquare,
-                        size: 12, color: Colors.blue.shade700),
+                        size: 12,
+                        color: Colors.blue.shade700),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -850,7 +902,8 @@ class _HistoryCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.75,
@@ -864,12 +917,14 @@ class _HistoryCard extends StatelessWidget {
                   height: 4,
                   decoration: BoxDecoration(
                       color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2))),
+                      borderRadius:
+                          BorderRadius.circular(2))),
             ),
             Expanded(
               child: ListView(
                 controller: ctrl,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                padding: const EdgeInsets.fromLTRB(
+                    20, 16, 20, 32),
                 children: [
                   Row(
                     children: [
@@ -884,11 +939,15 @@ class _HistoryCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                            color: statusInfo.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            color: statusInfo.color
+                                .withOpacity(0.1),
+                            borderRadius:
+                                BorderRadius.circular(20),
                             border: Border.all(
-                                color: statusInfo.color.withOpacity(0.3))),
-                        child: Text(statusInfo.label.toUpperCase(),
+                                color: statusInfo.color
+                                    .withOpacity(0.3))),
+                        child: Text(
+                            statusInfo.label.toUpperCase(),
                             style: TextStyle(
                                 color: statusInfo.color,
                                 fontWeight: FontWeight.bold,
@@ -899,16 +958,21 @@ class _HistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    DateFormat('d MMMM yyyy, h:mm a').format(report.createdAt),
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                    DateFormat('d MMMM yyyy, h:mm a')
+                        .format(report.createdAt),
+                    style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13),
                   ),
                   const Divider(height: 28),
                   Text(report.description,
-                      style: const TextStyle(fontSize: 14, height: 1.5)),
+                      style: const TextStyle(
+                          fontSize: 14, height: 1.5)),
                   if (report.photoUrl.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(12),
                       child: Image.network(report.photoUrl,
                           width: double.infinity,
                           height: 200,
@@ -921,9 +985,11 @@ class _HistoryCard extends StatelessWidget {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                           color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius:
+                              BorderRadius.circular(12)),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           Text('Management Response',
                               style: TextStyle(
