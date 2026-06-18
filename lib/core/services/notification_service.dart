@@ -227,3 +227,4 @@ class NotificationService {
     await _db.collection('notifications').doc(notificationId).delete();
   }
 }
+
