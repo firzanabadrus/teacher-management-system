@@ -96,7 +96,7 @@ class _KpiScreenState extends State<KpiScreen> {
 
   late String _selectedCategory;
   late String _selectedCriterion;
-  bool _isPositive = true;
+  double _scoreDelta = 0;
   String _severity = 'Normal';
 
   @override
@@ -253,7 +253,7 @@ class _KpiScreenState extends State<KpiScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: currentId,
+            initialValue: currentId,
             isExpanded: true, // prevents text overflow inside dropdown
             decoration: const InputDecoration(
               labelText: 'Select Teacher',
@@ -381,7 +381,7 @@ class _KpiScreenState extends State<KpiScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Category',
@@ -403,7 +403,7 @@ class _KpiScreenState extends State<KpiScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedCriterion,
+            initialValue: _selectedCriterion,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Criterion',
@@ -422,7 +422,7 @@ class _KpiScreenState extends State<KpiScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _severity,
+            initialValue: _severity,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Severity',
@@ -437,43 +437,72 @@ class _KpiScreenState extends State<KpiScreen> {
             onChanged: (v) => setState(() => _severity = v ?? 'Normal'),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => setState(() => _isPositive = true),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _isPositive ? AppTheme.primaryColor : Colors.grey[200],
-                    foregroundColor: _isPositive ? Colors.white : Colors.black,
-                  ),
-                  child: const Text('Merit'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => setState(() => _isPositive = false),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: !_isPositive ? AppTheme.primaryColor : Colors.grey[200],
-                    foregroundColor: !_isPositive ? Colors.white : Colors.black,
-                  ),
-                  child: const Text('Deduction'),
-                ),
-              ),
-            ],
-          ),
+          _buildScoreSlider(),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: provider.selectedTeacherId == null
+              onPressed: provider.selectedTeacherId == null || _scoreDelta == 0
                   ? null
                   : () => _submitPerformanceLog(context, provider, principal),
               icon: const Icon(LucideIcons.check),
-              label: Text(
-                'Save ${provider.scoreForSeverity(_severity, isPositive: _isPositive).toStringAsFixed(0)} pts',
-              ),
+              label: const Text('Apply Score'),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreSlider() {
+    final value = _scoreDelta.round();
+    final label = value == 0
+        ? '0 No change'
+        : value > 0
+            ? '+$value Merit'
+            : '$value Deduction';
+    final color = value > 0
+        ? Colors.green
+        : value < 0
+            ? Colors.red
+            : Colors.grey;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.ambientOffWhite,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.subtleGrayBoundary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Performance Score',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              ),
+              Text(label,
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Slider(
+            value: _scoreDelta,
+            min: -5,
+            max: 5,
+            divisions: 10,
+            label: label,
+            onChanged: (value) => setState(() => _scoreDelta = value.roundToDouble()),
+          ),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('-5 Deduction', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('0', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('+5 Merit', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
           ),
         ],
       ),
@@ -500,7 +529,7 @@ class _KpiScreenState extends State<KpiScreen> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       teacherId: provider.selectedTeacherId!,
       principalId: principal.id,
-      amount: provider.scoreForSeverity(_severity, isPositive: _isPositive),
+      amount: _scoreDelta,
       reason: reason,
       category: category,
       criterion: criterion,
@@ -516,7 +545,7 @@ class _KpiScreenState extends State<KpiScreen> {
         _selectedCategory = _categoryCriteria.keys.first;
         _selectedCriterion = _categoryCriteria[_selectedCategory]!.first;
         _severity = 'Normal';
-        _isPositive = true;
+        _scoreDelta = 0;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Performance log saved.')),
@@ -768,7 +797,7 @@ class _KpiScreenState extends State<KpiScreen> {
     return SizedBox(
       width: 160,
       child: DropdownButtonFormField<T>(
-        value: value,
+        initialValue: value,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,
@@ -799,7 +828,7 @@ class _KpiScreenState extends State<KpiScreen> {
         const SizedBox(height: 16),
         _buildYearlyKpiSection(provider),
         const SizedBox(height: 16),
-        _buildPerformanceLogsSection(provider),
+        _buildMonthlySummarySection(provider),
         const SizedBox(height: 16),
         _buildNotificationsSection(provider),
         const SizedBox(height: 16),
@@ -813,6 +842,11 @@ class _KpiScreenState extends State<KpiScreen> {
         .fold<double>(0, (s, l) => s + l.amount)
         .round();
     final trendFactor = provider.yearlyKpi?.trendFactor ?? 1.0;
+    final activeMonths = provider.performanceLogs
+        .where((log) => log.timestamp.year == DateTime.now().year)
+        .map((log) => log.timestamp.month)
+        .toSet()
+        .length;
 
     return LayoutBuilder(builder: (context, constraints) {
       final cardWidth = (constraints.maxWidth - 36) / 4;
@@ -822,7 +856,7 @@ class _KpiScreenState extends State<KpiScreen> {
         children: [
           _summaryCard('Score', score.toString(), LucideIcons.barChart2,
               _scoreColor(score), cardWidth),
-          _summaryCard('Logs', provider.performanceLogs.length.toString(),
+          _summaryCard('Active Months', activeMonths.toString(),
               LucideIcons.list, AppTheme.primaryColor, cardWidth),
           _summaryCard('Warnings', provider.warnings.length.toString(),
               LucideIcons.alertTriangle, Colors.orange, cardWidth),
@@ -883,16 +917,174 @@ class _KpiScreenState extends State<KpiScreen> {
     );
   }
 
-  Widget _buildPerformanceLogsSection(PerformanceProvider provider) {
+  Widget _buildMonthlySummarySection(PerformanceProvider provider) {
+    final currentYear = DateTime.now().year;
+
     return _panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('My Performance Logs',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _buildLogList(provider.performanceLogs, limit: 6),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Monthly Performance Summary',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              Text(currentYear.toString(),
+                  style: const TextStyle(color: Colors.grey)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Monthly summaries are aggregated. Individual evaluation records are restricted to admin.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(builder: (context, constraints) {
+            final width = constraints.maxWidth < 520
+                ? constraints.maxWidth
+                : (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: List.generate(12, (index) {
+                final month = index + 1;
+                final logs = _logsForMonth(provider.performanceLogs, month);
+                final total = logs.fold<double>(0, (sum, log) => sum + log.amount);
+                final average = logs.isEmpty ? 0.0 : total / logs.length;
+                final hasLogs = logs.isNotEmpty;
+                final trend = _monthTrend(provider.performanceLogs, month);
+
+                return SizedBox(
+                  width: width,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: hasLogs
+                        ? () => _showMonthlySummaryDialog(
+                              context,
+                              month,
+                              logs,
+                              provider.performanceLogs,
+                            )
+                        : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: hasLogs ? Colors.white : AppTheme.ambientOffWhite,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.subtleGrayBoundary),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_monthName(month),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  hasLogs
+                                      ? 'Total ${total > 0 ? '+' : ''}${total.toStringAsFixed(0)} · Avg ${average.toStringAsFixed(1)} · $trend'
+                                      : 'No summary record',
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            hasLogs
+                                ? '${total > 0 ? '+' : ''}${total.toStringAsFixed(0)}'
+                                : '-',
+                            style: TextStyle(
+                              color: total >= 0 ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+          }),
         ],
+      ),
+    );
+  }
+
+  List<PerformanceLog> _logsForMonth(List<PerformanceLog> logs, int month) {
+    final year = DateTime.now().year;
+    return logs
+        .where((log) => log.timestamp.year == year && log.timestamp.month == month)
+        .toList();
+  }
+
+  void _showMonthlySummaryDialog(
+    BuildContext context,
+    int month,
+    List<PerformanceLog> logs,
+    List<PerformanceLog> allLogs,
+  ) {
+    final total = logs.fold<double>(0, (sum, log) => sum + log.amount);
+    final average = logs.isEmpty ? 0.0 : total / logs.length;
+    final trend = _monthTrend(allLogs, month);
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.of(context).size.height * 0.82,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('${_monthName(month)} Summary',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _infoCard('Month', _monthName(month)),
+                        _infoCard('Monthly Total',
+                            '${total > 0 ? '+' : ''}${total.toStringAsFixed(0)}'),
+                        _infoCard('Monthly Average', average.toStringAsFixed(1)),
+                        _infoCard('Trend', trend),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -938,7 +1130,10 @@ class _KpiScreenState extends State<KpiScreen> {
                     color: AppTheme.primaryColor),
                 title: Text(n.title,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(n.message),
+                subtitle: Text(
+                  '${n.timestamp.month}/${n.timestamp.day}/${n.timestamp.year}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ))
           .toList(),
     );
@@ -977,8 +1172,11 @@ class _KpiScreenState extends State<KpiScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1),
-                  subtitle: Text('${w.issuedBy} · ${w.message}',
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(
+                    '${w.createdAt.month}/${w.createdAt.day}/${w.createdAt.year}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
               }).toList(),
             ),
@@ -1045,8 +1243,8 @@ class _KpiScreenState extends State<KpiScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1),
                             subtitle: Text(
-                              '${warning.issuedBy} · ${warning.message}',
-                              maxLines: 2,
+                              '${warning.createdAt.month}/${warning.createdAt.day}/${warning.createdAt.year}',
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           );
@@ -1095,7 +1293,7 @@ class _KpiScreenState extends State<KpiScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _warningType,
+            initialValue: _warningType,
             decoration: const InputDecoration(
               labelText: 'Warning Type',
               border: OutlineInputBorder(),
@@ -1189,9 +1387,9 @@ class _KpiScreenState extends State<KpiScreen> {
     final records = provider.yearlyKpis;
     if (records.isEmpty) {
       return _panel(
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('KPI Leaderboard',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 12),
@@ -1242,12 +1440,11 @@ class _KpiScreenState extends State<KpiScreen> {
                                 status: 'active',
                                 documents: {},
                               ))
-                      .fullName ??
-                  record.teacherId;
+                      .fullName;
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
-                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(record.rating),
                 ),
                 title: Text(teacherName,
@@ -1324,8 +1521,7 @@ class _KpiScreenState extends State<KpiScreen> {
                                       status: 'active',
                                       documents: {},
                                     ))
-                            .fullName ??
-                        record.teacherId;
+                            .fullName;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
@@ -1442,6 +1638,41 @@ class _KpiScreenState extends State<KpiScreen> {
   }
 
   String _trendValue(double f) => '${f.toStringAsFixed(1)}x';
+
+  String _monthName(int month) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    if (month < 1 || month > 12) return 'Month $month';
+    return months[month - 1];
+  }
+
+  String _monthTrend(List<PerformanceLog> logs, int month) {
+    if (month <= 1) return 'Stable';
+    final currentLogs = _logsForMonth(logs, month);
+    final previousLogs = _logsForMonth(logs, month - 1);
+    if (currentLogs.isEmpty || previousLogs.isEmpty) return 'Stable';
+
+    final currentTotal =
+        currentLogs.fold<double>(0, (sum, log) => sum + log.amount);
+    final previousTotal =
+        previousLogs.fold<double>(0, (sum, log) => sum + log.amount);
+
+    if (currentTotal > previousTotal) return 'Improving';
+    if (currentTotal < previousTotal) return 'Declining';
+    return 'Stable';
+  }
 
   Color _ratingColor(String rating) {
     switch (rating) {

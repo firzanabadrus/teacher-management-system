@@ -140,7 +140,7 @@ class PerformanceService {
     await _createNotification(
       warning.teacherId,
       'Warning issued: ${warning.warningType}',
-      warning.reason.isNotEmpty ? warning.reason : warning.notes,
+      'A warning has been added to your performance record.',
     );
   }
 
@@ -261,11 +261,17 @@ class PerformanceService {
     if (year <= 1) return 1.0;
 
     final prevMonthly = await calculateMonthlyScores(teacherId, year - 1);
-    final prevAverage =
-        prevMonthly.values.isEmpty ? 0.0 : prevMonthly.values.reduce((a, b) => a + b) / 12;
+    final prevActiveScores = prevMonthly.values.where((score) => score != 0).toList();
+    final prevAverage = prevActiveScores.isEmpty
+        ? 0.0
+        : prevActiveScores.reduce((a, b) => a + b) / prevActiveScores.length;
 
-    final currentAverage =
-        currentMonthly.values.isEmpty ? 0.0 : currentMonthly.values.reduce((a, b) => a + b) / 12;
+    final currentActiveScores =
+        currentMonthly.values.where((score) => score != 0).toList();
+    final currentAverage = currentActiveScores.isEmpty
+        ? 0.0
+        : currentActiveScores.reduce((a, b) => a + b) /
+            currentActiveScores.length;
 
     if (currentAverage > prevAverage) {
       return 1.1;
@@ -286,11 +292,20 @@ class PerformanceService {
 
   Future<YearlyKpiRecord> calculateYearlyKPI(
       String teacherId, int year, String principalId) async {
+    final logs = await getPerformanceLogsForTeacherInYear(teacherId, year).first;
     final monthlyScores = await calculateMonthlyScores(teacherId, year);
-    final average =
-        monthlyScores.values.isEmpty ? 0.0 : monthlyScores.values.reduce((a, b) => a + b) / 12;
+    final activeMonths = logs.map((log) => log.timestamp.month).toSet();
+    final activeMonthlyScores = activeMonths
+        .map((month) => monthlyScores[month] ?? 0.0)
+        .toList();
+    final average = activeMonths.isEmpty
+        ? 0.0
+        : activeMonthlyScores.reduce((a, b) => a + b) /
+            activeMonths.length;
     final trend = await _calculateTrendFactor(teacherId, year, monthlyScores);
-    final finalScore = kpiBaselineScore + (average * trend);
+    final finalScore = (kpiBaselineScore + (average * trend))
+        .clamp(kpiMinimumScore, kpiMaximumScore)
+        .toDouble();
     final rating = _calculateRating(finalScore);
 
     final kpiRecord = YearlyKpiRecord(
@@ -302,7 +317,8 @@ class PerformanceService {
       finalScore: finalScore,
       rating: rating,
       status: 'Pending',
-      notes: 'Auto-calculated KPI for year $year',
+      notes:
+          'Auto-calculated from ${activeMonths.length} active month(s); empty months are neutral.',
       timestamp: DateTime.now(),
     );
 
@@ -366,7 +382,7 @@ class PerformanceService {
       await _createNotification(
         log.teacherId,
         'CRITICAL ALERT: $teacherName',
-        'Critical deduction recorded: ${log.reason}',
+        'A critical deduction was recorded in your performance summary.',
       );
     }
 

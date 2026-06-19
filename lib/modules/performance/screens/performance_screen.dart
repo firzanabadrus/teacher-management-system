@@ -22,7 +22,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   late TextEditingController _criterionController;
   bool _hasFetched = false;
   String _severity = 'Normal';
-  String _isPositive = 'true';
+  double _scoreDelta = 0;
 
   @override
   void initState() {
@@ -70,7 +70,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           ],
           _buildPerformanceTrends(),
           const SizedBox(height: 32),
-          _buildRecentLogs(),
+          if (isPrincipal) _buildRecentLogs() else _buildTeacherMonthlySummary(),
         ],
       ),
     );
@@ -113,51 +113,94 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _severity,
-                    decoration: const InputDecoration(
-                      labelText: 'Severity',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'Minor', child: Text('Minor')),
-                      DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                      DropdownMenuItem(value: 'Major', child: Text('Major')),
-                      DropdownMenuItem(value: 'Critical', child: Text('Critical')),
-                    ],
-                    onChanged: (value) => setState(() => _severity = value ?? 'Normal'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _isPositive,
-                    decoration: const InputDecoration(
-                      labelText: 'Type',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'true', child: Text('+ Merit')),
-                      DropdownMenuItem(value: 'false', child: Text('- Deduction')),
-                    ],
-                    onChanged: (value) => setState(() => _isPositive = value ?? 'true'),
-                  ),
-                ),
+            DropdownButtonFormField<String>(
+              initialValue: _severity,
+              decoration: const InputDecoration(
+                labelText: 'Severity',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Minor', child: Text('Minor')),
+                DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+                DropdownMenuItem(value: 'Major', child: Text('Major')),
+                DropdownMenuItem(value: 'Critical', child: Text('Critical')),
               ],
+              onChanged: (value) => setState(() => _severity = value ?? 'Normal'),
             ),
+            const SizedBox(height: 12),
+            _buildScoreSlider(),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              onPressed: () => _submitPerformanceLog(context, principal),
-              child: const Text('Add Performance Log'),
+              onPressed: _scoreDelta == 0
+                  ? null
+                  : () => _submitPerformanceLog(context, principal),
+              child: const Text('Apply Score'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScoreSlider() {
+    final value = _scoreDelta.round();
+    final label = value == 0
+        ? '0 No change'
+        : value > 0
+            ? '+$value Merit'
+            : '$value Deduction';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.ambientOffWhite,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.subtleGrayBoundary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Performance Score',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              ),
+              Text(label,
+                  style: TextStyle(
+                    color: value > 0
+                        ? Colors.green
+                        : value < 0
+                            ? Colors.red
+                            : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  )),
+            ],
+          ),
+          Slider(
+            value: _scoreDelta,
+            min: -5,
+            max: 5,
+            divisions: 10,
+            label: label,
+            onChanged: (value) =>
+                setState(() => _scoreDelta = value.roundToDouble()),
+          ),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('-5 Deduction',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('0', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('+5 Merit',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -172,18 +215,13 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
       return;
     }
 
-    final isPositive = _isPositive == 'true';
     final performanceProvider = Provider.of<PerformanceProvider>(context, listen: false);
-    final amount = performanceProvider.scoreForSeverity(
-      _severity,
-      isPositive: isPositive,
-    );
 
     final log = PerformanceLog(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       teacherId: widget.user.id,
       principalId: principal.id,
-      amount: amount,
+      amount: _scoreDelta,
       reason: _reasonController.text,
       category: _categoryController.text,
       criterion: _criterionController.text,
@@ -202,7 +240,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
       _criterionController.clear();
       setState(() {
         _severity = 'Normal';
-        _isPositive = 'true';
+        _scoreDelta = 0;
       });
     } catch (e) {
       if (!context.mounted) return;
@@ -283,6 +321,11 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   }
 
   Widget _buildPerformanceTrends() {
+    final performanceProvider = Provider.of<PerformanceProvider>(context);
+    final spots = performanceProvider.monthlyScores.entries
+        .map((entry) => FlSpot(entry.key.toDouble(), entry.value))
+        .toList();
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -316,10 +359,9 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                   borderData: FlBorderData(show: false),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: const [
-                        FlSpot(1, 75), FlSpot(2, 78), FlSpot(3, 82),
-                        FlSpot(4, 80), FlSpot(5, 85), FlSpot(6, 85),
-                      ],
+                      spots: spots.isEmpty
+                          ? const [FlSpot(1, 0), FlSpot(12, 0)]
+                          : spots,
                       isCurved: true,
                       color: AppTheme.primaryColor,
                       barWidth: 4,
@@ -374,5 +416,134 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildTeacherMonthlySummary() {
+    final performanceProvider = Provider.of<PerformanceProvider>(context);
+    final logs = performanceProvider.performanceLogs;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Monthly Performance Summary',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text(
+              'Only monthly aggregated KPI data is shown.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            LayoutBuilder(builder: (context, constraints) {
+              final tileWidth = constraints.maxWidth < 520
+                  ? constraints.maxWidth
+                  : (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: List.generate(12, (index) {
+                  final month = index + 1;
+                  final monthLogs = _logsForMonth(logs, month);
+                  final total = monthLogs.fold<double>(
+                      0, (sum, log) => sum + log.amount);
+                  final average =
+                      monthLogs.isEmpty ? 0.0 : total / monthLogs.length;
+                  final trend = _monthTrend(logs, month);
+
+                  return SizedBox(
+                    width: tileWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: monthLogs.isEmpty
+                            ? AppTheme.ambientOffWhite
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.subtleGrayBoundary),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_monthName(month),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  monthLogs.isEmpty
+                                      ? 'No summary record'
+                                      : 'Total ${total > 0 ? '+' : ''}${total.toStringAsFixed(0)} · Avg ${average.toStringAsFixed(1)} · $trend',
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            monthLogs.isEmpty
+                                ? '-'
+                                : '${total > 0 ? '+' : ''}${total.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: total >= 0 ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<PerformanceLog> _logsForMonth(List<PerformanceLog> logs, int month) {
+    final year = DateTime.now().year;
+    return logs
+        .where((log) => log.timestamp.year == year && log.timestamp.month == month)
+        .toList();
+  }
+
+  String _monthTrend(List<PerformanceLog> logs, int month) {
+    if (month <= 1) return 'Stable';
+    final currentLogs = _logsForMonth(logs, month);
+    final previousLogs = _logsForMonth(logs, month - 1);
+    if (currentLogs.isEmpty || previousLogs.isEmpty) return 'Stable';
+
+    final currentTotal =
+        currentLogs.fold<double>(0, (sum, log) => sum + log.amount);
+    final previousTotal =
+        previousLogs.fold<double>(0, (sum, log) => sum + log.amount);
+    if (currentTotal > previousTotal) return 'Improving';
+    if (currentTotal < previousTotal) return 'Declining';
+    return 'Stable';
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    if (month < 1 || month > 12) return 'M$month';
+    return months[month - 1];
   }
 }

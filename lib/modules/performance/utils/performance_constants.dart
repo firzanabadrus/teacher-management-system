@@ -1,4 +1,6 @@
 const double kpiBaselineScore = 100.0;
+const double kpiMinimumScore = 0.0;
+const double kpiMaximumScore = 100.0;
 
 const List<String> warningTypes = [
   'Verbal Warning',
