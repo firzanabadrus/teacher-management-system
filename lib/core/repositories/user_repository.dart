@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -22,11 +23,31 @@ class UserRepository {
   /// `AppUser` instance.
   Future<AppUser?> ensureUserForFirebase(User firebaseUser) async {
     final uid = firebaseUser.uid;
-    final existing = await getUser(uid);
+    AppUser? existing;
+    try {
+      existing = await getUser(uid).timeout(const Duration(seconds: 10));
+    } on TimeoutException catch (_) {
+      debugPrint('getUser timed out for uid=$uid');
+      existing = null;
+    } catch (e, st) {
+      debugPrint('getUser failed for uid=$uid: $e');
+      debugPrint('$st');
+      existing = null;
+    }
     if (existing != null) return existing;
 
     // If there's a teacher record, map it to AppUser.
-    final teacher = await _teacherService.getTeacherById(uid);
+    TeacherRecord? teacher;
+    try {
+      teacher = await _teacherService.getTeacherById(uid).timeout(const Duration(seconds: 8));
+    } on TimeoutException catch (_) {
+      debugPrint('getTeacherById timed out for uid=$uid');
+      teacher = null;
+    } catch (e, st) {
+      debugPrint('getTeacherById failed for uid=$uid: $e');
+      debugPrint('$st');
+      teacher = null;
+    }
     if (teacher != null) {
       return AppUser(
         uid: teacher.id,
@@ -68,7 +89,14 @@ class UserRepository {
       documents: {},
     );
 
-    await _teacherService.updateTeacher(newTeacher);
+    try {
+      await _teacherService.updateTeacher(newTeacher).timeout(const Duration(seconds: 8));
+    } on TimeoutException catch (_) {
+      debugPrint('updateTeacher timed out for uid=$uid');
+    } catch (e, st) {
+      debugPrint('updateTeacher failed for uid=$uid: $e');
+      debugPrint('$st');
+    }
 
     return AppUser(
       uid: uid,
@@ -85,8 +113,17 @@ class UserRepository {
   static const Set<String> validRoles = {'teacher', 'admin', 'principal'};
 
   Future<AppUser?> getUser(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists && doc.data() != null) return AppUser.fromMap(doc.id, doc.data()!);
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get().timeout(const Duration(seconds: 10));
+      if (doc.exists && doc.data() != null) return AppUser.fromMap(doc.id, doc.data()!);
+    } on TimeoutException catch (_) {
+      debugPrint('Firestore get user timed out for uid=$uid');
+      return null;
+    } catch (e, st) {
+      debugPrint('Firestore get user failed for uid=$uid: $e');
+      debugPrint('$st');
+      return null;
+    }
 
     // Fallback: try the teachers collection if users collection is not present.
     final teacher = await _teacherService.getTeacherById(uid);
@@ -120,7 +157,8 @@ class UserRepository {
           .collection('teachers')
           .where('email', isEqualTo: normalizedEmail)
           .limit(1)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 10));
       if (tq.docs.isNotEmpty) {
         final doc = tq.docs.first;
         final data = doc.data();
@@ -135,7 +173,14 @@ class UserRepository {
           lastLogin: null,
         );
       }
-    } catch (_) {}
+    } on TimeoutException catch (_) {
+      debugPrint('Firestore query teachers timed out for email=$normalizedEmail');
+      return null;
+    } catch (e, st) {
+      debugPrint('Firestore query teachers failed for email=$normalizedEmail: $e');
+      debugPrint('$st');
+      return null;
+    }
 
     return null;
   }

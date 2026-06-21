@@ -38,6 +38,15 @@ Future<void> _initFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // App Check activation is disabled during local debug to avoid
+    // network failures when App Check API / attestation is not configured
+    // or when enforcement is disabled in Firebase Console. If you need to
+    // enable App Check, set `enableAppCheck` to true and configure the
+    // providers in Firebase Console.
+    // App Check activation removed from build to avoid native attestation
+    // failures while debugging on physical devices. Configure App Check in
+    // Firebase Console and re-add activation when ready.
+
     await DatabaseSeeder.seedDatabase();
   } catch (e, stack) {
     debugPrint('Firebase init failed: $e');

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -53,35 +54,46 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> initializeSession() async {
     _setLoading(true);
+    const timeout = Duration(minutes: 1);
     try {
-      _rememberedAccounts = await _loadRememberedAccounts();
-      final firebaseUser = _authService.currentFirebaseUser;
-      if (firebaseUser == null) {
-        _clearSessionOnly();
-        return;
-      }
+      await (() async {
+        _rememberedAccounts = await _loadRememberedAccounts();
+        final firebaseUser = _authService.currentFirebaseUser;
+        if (firebaseUser == null) {
+          _clearSessionOnly();
+          return;
+        }
 
-      await _authService.reloadCurrentUser();
-      final refreshedUser = _authService.currentFirebaseUser;
-      if (refreshedUser == null) {
-        _clearSessionOnly(message: 'Your session has expired. Please sign in again.');
-        return;
-      }
+        await _authService.reloadCurrentUser();
+        final refreshedUser = _authService.currentFirebaseUser;
+        if (refreshedUser == null) {
+          _clearSessionOnly(message: 'Your session has expired. Please sign in again.');
+          return;
+        }
 
-      final appUser = await _userRepository.ensureUserForFirebase(refreshedUser);
-      final validationError = _userRepository.validateUserForLogin(appUser);
-      if (validationError != null) {
+        final appUser = await _userRepository.ensureUserForFirebase(refreshedUser);
+        final validationError = _userRepository.validateUserForLogin(appUser);
+        if (validationError != null) {
+          await _authService.signOut();
+          _clearSessionOnly(message: validationError);
+          return;
+        }
+
+        _appUser = appUser;
+        _currentUser = await _userRepository.getDashboardUser(appUser!);
+      })().timeout(timeout);
+    } on TimeoutException catch (_) {
+      debugPrint('Session restore timed out after ${timeout.inSeconds}s');
+      try {
         await _authService.signOut();
-        _clearSessionOnly(message: validationError);
-        return;
-      }
-
-      _appUser = appUser;
-      _currentUser = await _userRepository.getDashboardUser(appUser!);
+      } catch (_) {}
+      _clearSessionOnly(message: 'Session restore timed out. Please sign in.');
     } on FirebaseAuthException catch (e, stack) {
       debugPrint('Session restore failed: ${e.code}');
       debugPrint('$stack');
-      await _authService.signOut();
+      try {
+        await _authService.signOut();
+      } catch (_) {}
       _clearSessionOnly(message: 'Your session has expired. Please sign in again.');
     } catch (e, stack) {
       debugPrint('Session restore failed: $e');
@@ -99,43 +111,69 @@ class AppStateProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _sessionMessage = null;
+    const timeout = Duration(minutes: 1);
     try {
-      final normalizedEmail = email.trim().toLowerCase();
-      final credential = await _authService.signIn(
-        email: normalizedEmail,
-        password: password,
-      );
-      final firebaseUser = credential.user;
-      if (firebaseUser == null) {
+      return await (() async {
+        try {
+          final normalizedEmail = email.trim().toLowerCase();
+          final credential = await _authService.signIn(
+            email: normalizedEmail,
+            password: password,
+          );
+          final firebaseUser = credential.user;
+          if (firebaseUser == null) {
+            await _authService.signOut();
+            return 'Unable to sign in. Please try again.';
+          }
+
+          final appUser = await _userRepository.ensureUserForFirebase(firebaseUser);
+          final validationError = _userRepository.validateUserForLogin(appUser);
+          if (validationError != null) {
+            await _authService.signOut();
+            return validationError;
+          }
+
+          _appUser = appUser;
+          _currentUser = await _userRepository.getDashboardUser(appUser!);
+          await _userRepository.updateLastLogin(appUser.uid);
+
+          if (rememberMe) {
+            await rememberAccount(appUser, password: password);
+          }
+
+          notifyListeners();
+          return null;
+        } on FirebaseAuthException catch (e, stack) {
+          debugPrint('Login failed: ${e.code}');
+          debugPrint('$stack');
+          return _authService.friendlyAuthError(e);
+        } catch (e, stack) {
+          debugPrint('Login failed: $e');
+          debugPrint('$stack');
+          // If Firestore reported UNAVAILABLE (channel shutdown), reset the
+          // Firestore client so subsequent calls create fresh channels.
+          final lower = e.toString().toLowerCase();
+          if (lower.contains('unavailable') || lower.contains('channel shutdown')) {
+            try {
+              await FirebaseFirestore.instance.terminate();
+            } catch (te) {
+              debugPrint('Firestore terminate during login error handling failed: $te');
+            }
+            try {
+              await FirebaseFirestore.instance.clearPersistence();
+            } catch (ce) {
+              debugPrint('Firestore clearPersistence during login error handling failed: $ce');
+            }
+          }
+          return 'Unable to sign in. Please try again.';
+        }
+      })().timeout(timeout);
+    } on TimeoutException catch (_) {
+      debugPrint('Login timed out after ${timeout.inSeconds}s');
+      try {
         await _authService.signOut();
-        return 'Unable to sign in. Please try again.';
-      }
-
-      final appUser = await _userRepository.ensureUserForFirebase(firebaseUser);
-      final validationError = _userRepository.validateUserForLogin(appUser);
-      if (validationError != null) {
-        await _authService.signOut();
-        return validationError;
-      }
-
-      _appUser = appUser;
-      _currentUser = await _userRepository.getDashboardUser(appUser!);
-      await _userRepository.updateLastLogin(appUser.uid);
-
-      if (rememberMe) {
-        await rememberAccount(appUser, password: password);
-      }
-
-      notifyListeners();
-      return null;
-    } on FirebaseAuthException catch (e, stack) {
-      debugPrint('Login failed: ${e.code}');
-      debugPrint('$stack');
-      return _authService.friendlyAuthError(e);
-    } catch (e, stack) {
-      debugPrint('Login failed: $e');
-      debugPrint('$stack');
-      return 'Unable to sign in. Please try again.';
+      } catch (_) {}
+      return 'Login timed out. Check your connection and try again.';
     } finally {
       _setLoading(false);
     }
@@ -287,6 +325,19 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _authService.signOut();
+
+      // Ensure Firestore channels are terminated and local persistence cleared
+      // to avoid re-using stale streams when a new user signs in immediately.
+      try {
+        await FirebaseFirestore.instance.terminate();
+      } catch (e) {
+        debugPrint('Firestore terminate failed during logout: $e');
+      }
+      try {
+        await FirebaseFirestore.instance.clearPersistence();
+      } catch (e) {
+        debugPrint('Firestore clearPersistence failed during logout: $e');
+      }
     } catch (e, stack) {
       debugPrint('Logout failed: $e');
       debugPrint('$stack');
