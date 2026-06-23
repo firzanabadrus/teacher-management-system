@@ -37,8 +37,8 @@ dependencies:
   url_launcher: ^6.3.2
   
   # Interactive icons
-  lucide_icons: 0.257.0
-  
+  lucide_flutter: ^1.20.0
+
   # Caching and local persistence
   shared_preferences: ^2.2.2
   firebase_auth: ^6.5.2
